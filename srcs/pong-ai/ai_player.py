@@ -29,6 +29,7 @@ class AIPlayer:
         self.websocket: Optional[websockets.WebSocketClientProtocol] = None
         self.playing = False
         self.paddle = "right"
+        self._debug_frame = 0
 
         self.max_retries = 2
         self.initial_delay = 1.0
@@ -95,9 +96,7 @@ class AIPlayer:
             return
 
         self.playing = True
-        # Track last sent action so we can always send "stop" when transitioning
-        # but don't suppress "up"/"down" — server needs them every frame to keep
-        # moving (setPaddleDirection is stateful: it persists until overridden).
+        self._debug_frame = 0
         last_sent_action = "stop"
 
         try:
@@ -120,10 +119,18 @@ class AIPlayer:
                             obs        = self._extract_observation(game_state)
                             new_action = self._get_action(obs)
 
-                            # Always send the action — the server's paddle direction
-                            # is persistent, so if we only send on change the paddle
-                            # keeps drifting in whatever direction was last set.
-                            # Exception: suppress duplicate "stop" to avoid noise.
+                            # Log every 60 frames (~1s) so we can diagnose without spam
+                            if self._debug_frame % 60 == 0:
+                                print(
+                                    f"[DEBUG frame={self._debug_frame}] "
+                                    f"obs=[ball_x={obs[0]:.1f} ball_y={obs[1]:.1f} "
+                                    f"vx={obs[2]:.2f} vy={obs[3]:.2f} "
+                                    f"left_paddle_y={obs[4]:.1f} right_paddle_y={obs[5]:.1f}] "
+                                    f"=> action={new_action}",
+                                    flush=True
+                                )
+                            self._debug_frame += 1
+
                             if new_action != "stop" or last_sent_action != "stop":
                                 await self.send_paddle_action(new_action)
                                 last_sent_action = new_action
@@ -148,7 +155,6 @@ class AIPlayer:
                         self.playing = False
 
                 except asyncio.TimeoutError:
-                    # 5s without a frame — send ping to keep connection alive
                     if self._is_connected():
                         await self.websocket.send(json.dumps({"type": "ping"}))
 
