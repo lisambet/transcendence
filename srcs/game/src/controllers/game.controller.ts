@@ -13,11 +13,9 @@ export async function gameSettings(this: FastifyInstance, req: FastifyRequest) {
     settings?: GameSettings;
   };
 
-  // ✅ Get sessionId from body
   const sessionId = body.sessionId;
   const settings = body.settings;
 
-  // Validate sessionId
   if (!sessionId) {
     this.log.warn({ body }, 'Missing sessionId in request body');
     return {
@@ -26,7 +24,6 @@ export async function gameSettings(this: FastifyInstance, req: FastifyRequest) {
     };
   }
 
-  // Validate settings
   if (!settings) {
     this.log.warn({ sessionId, body }, 'Missing settings in request body');
     return {
@@ -35,7 +32,6 @@ export async function gameSettings(this: FastifyInstance, req: FastifyRequest) {
     };
   }
 
-  // Get session
   const sessionData = gameSessions.get(sessionId);
   if (!sessionData) {
     this.log.warn({ sessionId }, 'Session not found');
@@ -52,7 +48,6 @@ export async function gameSettings(this: FastifyInstance, req: FastifyRequest) {
       message: `game session cannot be changed (certainly running)`,
     };
   }
-  // Apply settings
   sessionData.game.applySettings(settings as GameSettings);
   this.log.info({ sessionId, settings }, 'Game settings applied successfully');
 
@@ -108,16 +103,10 @@ export async function webSocketConnect(
   console.log('get to the sessions id by WS');
   const params = req.params as { sessionId: string };
   const sessionId = params.sessionId;
-
-  // const sessionData = getSessionData.call(this, null, sessionId);
-  // if (sessionData && sessionData.player.size === 2) {
-  //  socket.close(WS_CLOSE.SESSION_FULL, 'Game session is full');
-  //  return
-  // }
   handleClientMessage.call(this, socket, sessionId);
 }
 
-// RL API: Reset game session
+// RL API: Reset game session and start it immediately for RL training
 export async function resetGame(this: FastifyInstance, req: FastifyRequest) {
   const body = req.body as { sessionId?: string };
   const sessionId = body.sessionId;
@@ -128,14 +117,28 @@ export async function resetGame(this: FastifyInstance, req: FastifyRequest) {
   if (!sessionData) {
     return { status: 'failure', message: `Session ${sessionId} not found` };
   }
+
+  // Stop any running interval
+  if (sessionData.interval) {
+    clearInterval(sessionData.interval);
+    sessionData.interval = null;
+  }
+
+  // Full reset
   sessionData.game.scores.left = 0;
   sessionData.game.scores.right = 0;
-  sessionData.game.status = 'waiting';
+  sessionData.game.status = 'playing';  // set before start() so it doesn't early-return
   sessionData.game.resetBall();
+
+  // Re-initialise the noise field
+  if (sessionData.game.cosmicBackground) {
+    sessionData.game.time = 0;
+  }
+
   return { status: 'success', state: sessionData.game.getState() };
 }
 
-// RL API: Step (apply action)
+// RL API: Step (apply action + advance N ticks)
 export async function stepGame(this: FastifyInstance, req: FastifyRequest) {
   const body = req.body as {
     sessionId?: string;
@@ -152,17 +155,33 @@ export async function stepGame(this: FastifyInstance, req: FastifyRequest) {
   if (!sessionData) {
     return { status: 'failure', message: `Session ${sessionId} not found` };
   }
+
+  const prevScoreRight = sessionData.game.scores.right;
+  const prevScoreLeft  = sessionData.game.scores.left;
+  const prevState      = sessionData.game.getState();
+
   sessionData.game.setPaddleDirection(paddle, action);
   sessionData.game.update();
-  let reward = 0;
-  let done = false;
-  if (sessionData.game.status === 'finished') {
-    done = true;
-    reward = sessionData.game.scores.right > sessionData.game.scores.left ? 1 : -1;
-  }
+
+  const state         = sessionData.game.getState();
+  const done          = sessionData.game.status === 'finished';
+  const scoredRight   = sessionData.game.scores.right - prevScoreRight;
+  const scoredLeft    = sessionData.game.scores.left  - prevScoreLeft;
+
+  // Shaped reward:
+  //   +1   AI scores a point
+  //   -1   opponent scores a point
+  //   +0.1 small reward for keeping paddle close to ball (encourages tracking)
+  const paddleCenterY = (state.paddles[paddle].y + state.paddles[paddle].height / 2);
+  const ballY         = state.ball.y;
+  const maxDist       = 600;
+  const trackingReward = (1 - Math.abs(paddleCenterY - ballY) / maxDist) * 0.1;
+
+  let reward = scoredRight - scoredLeft + (done ? 0 : trackingReward);
+
   return {
     status: 'success',
-    state: sessionData.game.getState(),
+    state,
     reward,
     done,
   };
