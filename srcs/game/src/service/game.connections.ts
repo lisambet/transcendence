@@ -33,16 +33,16 @@ export function addPlayerConnection(this: FastifyInstance, socket: WebSocket, se
   const players = currentSession.players;
 
   if (players.size >= 2) {
-    this.log.info('Too much players in session, refused connection.');
+    console.log('Too much players in session');
     socket.close(WS_CLOSE.SESSION_FULL, 'Session full');
     return false;
   } else if (players.size === 1 && Array.from(players.values())[0] === 'A') {
     players.set(socket, 'B');
-    this.log.info('Player connected as Player B');
+    console.log('Player connected as Player B');
     socket.send(JSON.stringify({ type: 'connected', message: 'Player B' }));
   } else {
     players.set(socket, 'A');
-    this.log.info('Player connected as Player A');
+    console.log('Player connected as Player A');
     socket.send(JSON.stringify({ type: 'connected', message: 'Player A' }));
   }
 
