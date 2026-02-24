@@ -5,6 +5,9 @@ import {
   newGameSession,
   healthCheck,
   gameSettings,
+  resetGame,
+  stepGame,
+  getGameState,
 } from '../controllers/game.controller.js';
 
 export async function gameRoutes(app: FastifyInstance) {
@@ -12,6 +15,12 @@ export async function gameRoutes(app: FastifyInstance) {
   app.get('/sessions', listGameSessions);
   app.post('/create-session', newGameSession);
   app.get('/health', healthCheck);
+
+  // RL training endpoints
+  app.post('/rl/reset', resetGame);
+  app.post('/rl/step', stepGame);
+  app.get('/rl/state', getGameState);
+
   // @ts-ignore - Fastify WebSocket plugin adds { websocket: true } option at runtime
   app.get('/:sessionId', { websocket: true }, webSocketConnect);
 }
