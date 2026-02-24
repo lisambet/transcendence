@@ -132,6 +132,8 @@ services:
     container_name: '${GAME_SERVICE_NAME}-dev'
     expose:
       - '${GAME_SERVICE_PORT}'
+    ports:
+      - '3003:${GAME_SERVICE_PORT}'  # exposed for local RL training
     env_file:
       - path: ./.env
       - path: ./.env.game
