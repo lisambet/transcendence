@@ -55,9 +55,9 @@ class AIPlayer:
             print("AI disconnected")
 
     def _extract_observation(self, game_state: dict) -> np.ndarray:
-        """Extract 4-feature observation matching the training environment (pong_env.py):
-        [ball_x, ball_y, left_paddle_y (center), right_paddle_y (center)]
-        Raw pixel coordinates - no normalization - matching observation_space bounds [0..800, 0..600, 0..600, 0..600].
+        """Extract 6-feature observation matching the trained model:
+        [ball_x, ball_y, vx, vy, left_paddle_y (center), right_paddle_y (center)]
+        Raw pixel coordinates - no normalization.
         """
         try:
             ball = game_state["ball"]
@@ -67,12 +67,14 @@ class AIPlayer:
             return np.array([
                 ball["x"],
                 ball["y"],
+                ball.get("vx", 0),
+                ball.get("vy", 0),
                 left_paddle_y,
                 right_paddle_y
             ], dtype=np.float32)
         except (KeyError, TypeError) as e:
             print(f"Error extracting observation: {e}", flush=True)
-            return np.array([400, 300, 300, 300], dtype=np.float32)
+            return np.array([400, 300, 0, 0, 300, 300], dtype=np.float32)
 
     def _get_action(self, observation: np.ndarray) -> str:
         action, _ = self.model.predict(observation, deterministic=True)
@@ -126,7 +128,8 @@ class AIPlayer:
                                 print(
                                     f"[DEBUG frame={self._debug_frame}] "
                                     f"obs=[ball_x={obs[0]:.1f} ball_y={obs[1]:.1f} "
-                                    f"left_paddle_y={obs[2]:.1f} right_paddle_y={obs[3]:.1f}] "
+                                    f"vx={obs[2]:.2f} vy={obs[3]:.2f} "
+                                    f"left_paddle_y={obs[4]:.1f} right_paddle_y={obs[5]:.1f}] "
                                     f"=> action={new_action}",
                                     flush=True
                                 )
