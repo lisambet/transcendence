@@ -55,6 +55,9 @@ class PongEnv(gym.Env):
         self._http = requests.Session()
         self._http.verify = self.verify_ssl
 
+        # Last observation — used by SelfPlayEnv to compute opponent action
+        self._last_obs = None
+
         self.session_id = self._create_session()
         print(f"[PongEnv] Session created: {self.session_id} (SSL verify={self.verify_ssl})")
         self.reset()
@@ -83,6 +86,7 @@ class PongEnv(gym.Env):
             if "state" not in data:
                 raise KeyError(f"Expected 'state' in response, got: {list(data.keys())}")
             obs = self._convert_state(data["state"])
+            self._last_obs = obs
             return obs, {}
         except requests.exceptions.RequestException as e:
             print(f"[PongEnv] Error resetting game: {e}")
@@ -95,8 +99,6 @@ class PongEnv(gym.Env):
         done = False
 
         # Advance FRAME_SKIP ticks, accumulate reward.
-        # This simulates the ~66 ms latency between the AI deciding and the
-        # server applying the action, so the model learns to plan ahead.
         for i in range(FRAME_SKIP):
             try:
                 resp = self._http.post(
@@ -119,6 +121,47 @@ class PongEnv(gym.Env):
                 print(f"[PongEnv] Error in step: {e}")
                 raise
 
+        self._last_obs = obs
+        return obs, reward, done, False, {}
+
+    def step_both(self, right_action, left_action):
+        """Advance the game sending actions for BOTH paddles simultaneously.
+
+        Used by SelfPlayEnv so the opponent (left paddle) and the learning
+        agent (right paddle) act in the same tick.
+
+        The game service /rl/step endpoint must accept an optional
+        'leftAction' field alongside 'action' / 'paddle'.
+        """
+        action_map = {0: "stop", 1: "up", 2: "down"}
+        obs = None
+        reward = 0
+        done = False
+
+        for _ in range(FRAME_SKIP):
+            try:
+                resp = self._http.post(
+                    f"{self.base_url}/rl/step",
+                    json={
+                        "sessionId": self.session_id,
+                        "action": action_map[right_action],
+                        "paddle": "right",
+                        "leftAction": action_map[left_action],
+                    },
+                    timeout=5
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                obs = self._convert_state(data["state"])
+                reward += data.get("reward", 0)
+                done = data.get("done", False)
+                if done:
+                    break
+            except requests.exceptions.RequestException as e:
+                print(f"[PongEnv] Error in step_both: {e}")
+                raise
+
+        self._last_obs = obs
         return obs, reward, done, False, {}
 
     def _convert_state(self, backend_state):
