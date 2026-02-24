@@ -144,10 +144,13 @@ export async function stepGame(this: FastifyInstance, req: FastifyRequest) {
     sessionId?: string;
     action?: 'up' | 'down' | 'stop';
     paddle?: 'left' | 'right';
+    leftAction?: 'up' | 'down' | 'stop';  // optional: self-play opponent action
   };
-  const sessionId = body.sessionId;
-  const action = body.action;
-  const paddle = body.paddle || 'right';
+  const sessionId  = body.sessionId;
+  const action     = body.action;
+  const paddle     = body.paddle || 'right';
+  const leftAction = body.leftAction;  // undefined when not in self-play mode
+
   if (!sessionId || !action) {
     return { status: 'failure', message: 'sessionId and action are required' };
   }
@@ -158,9 +161,16 @@ export async function stepGame(this: FastifyInstance, req: FastifyRequest) {
 
   const prevScoreRight = sessionData.game.scores.right;
   const prevScoreLeft  = sessionData.game.scores.left;
-  const prevState      = sessionData.game.getState();
 
+  // Apply right paddle action (the learning agent)
   sessionData.game.setPaddleDirection(paddle, action);
+
+  // Apply left paddle action if provided (self-play opponent)
+  // If omitted the left paddle keeps its previous direction (stays static).
+  if (leftAction) {
+    sessionData.game.setPaddleDirection('left', leftAction);
+  }
+
   sessionData.game.update();
 
   const state         = sessionData.game.getState();
@@ -177,7 +187,7 @@ export async function stepGame(this: FastifyInstance, req: FastifyRequest) {
   const maxDist       = 600;
   const trackingReward = (1 - Math.abs(paddleCenterY - ballY) / maxDist) * 0.1;
 
-  let reward = scoredRight - scoredLeft + (done ? 0 : trackingReward);
+  const reward = scoredRight - scoredLeft + (done ? 0 : trackingReward);
 
   return {
     status: 'success',
