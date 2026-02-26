@@ -67,6 +67,7 @@ const hslToRgb = (h: number, s: number, l: number): [number, number, number] => 
 
   return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 };
+
 const Arena = ({ className = '', gameStateRef }: ArenaProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -80,7 +81,6 @@ const Arena = ({ className = '', gameStateRef }: ArenaProps) => {
     const height = cosmicBackground.length;
     if (!width || !height) return;
 
-    console.log('Draw background');
     const imageData = ctx.createImageData(width, height);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -160,8 +160,27 @@ const Arena = ({ className = '', gameStateRef }: ArenaProps) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     };
   }, [gameStateRef]);
-
-  return <canvas ref={canvasRef} width={800} height={600} className="w-full h-full" />;
+  return (
+    <div className="w-full h-full flex  p-8">
+      <div className="relative w-full h-full max-w-5xl">
+        <canvas
+          ref={canvasRef}
+          width={800}
+          height={600}
+          className="w-full object-contain border-2 border-purple-500/50 rounded-xl shadow-2xl"
+          style={{
+            aspectRatio: '4/3',
+            backgroundColor: '#000',
+          }}
+        />
+      </div>
+    </div>
+  );
+  // return (
+  //   <div className="w-full h-full flex items-center justify-center p-4">
+  //     <canvas ref={canvasRef} width={800} height={600} className="w-full h-full" />
+  //   </div>
+  // );
 };
 
 export default Arena;

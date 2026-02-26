@@ -81,8 +81,9 @@
     "termsOfService": "Terms of Service"
   },
   "game": {
-    "playWithAI": "Play with AI",
-    "playWithFriends": "Play with Friends",
+    "playWithAi": "Play with AI",
+    "playRemote": "Remote Game",
+    "playLocal": "Local Game",
     "tournament": "Tournament",
     "game": "Game",
     "participate": "Participate",
@@ -102,8 +103,10 @@
     "semi_final": "Semi-Final",
     "little_final": "Little-Finale",
     "start": "Start",
+    "run": "Launch Tournament",
     "friends": "Friends",
     "waitiing": "Waiting...",
-    "creating": "Creating tournament..."
+    "creating": "Creating tournament...",
+    "tournament_full": "This tournament is full(maximum 4 players)."
   }
 }

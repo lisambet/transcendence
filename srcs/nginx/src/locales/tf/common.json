@@ -82,7 +82,8 @@
   },
   "game": {
     "playWithAI": "Défie le machin",
-    "playWithFriends": "Joue avec tes potes",
+    "playRemote": "Joue a 2 sur cette becane",
+    "playLocal": "Joue avec tes potes en remote",
     "tournament": "Vendetta",
     "game": "La mort ou la vie",
     "participate": "Tu cherches des embrouilles!",
@@ -102,8 +103,10 @@
     "semi_final": "On prends du Galon",
     "little_final": "Les loosers c'est ici",
     "start": "C'est parti",
+    "run": "Lancement de la Vendetta",
     "friends": "Les potes",
     "waitiing": "On t'attend...",
-    "creating": "Création de la vendetta..."
+    "creating": "Création de la vendetta...",
+    "tournament_full": "Cette vendetta est complete(maximum 4 truands)."
   }
 }

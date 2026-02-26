@@ -2,7 +2,6 @@ import { Route, Routes } from 'react-router-dom';
 import { MyProfilePage } from './pages/MyProfilePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { GamePage } from './pages/GamePage';
-import { LoginPage } from './pages/LoginRegisterPage';
 import { useAuth } from './providers/AuthProvider';
 import { AnimationPage } from './pages/AnimationPage';
 import { FriendsPage } from './pages/FriendsPage';
@@ -29,11 +28,18 @@ export const App = () => {
         {/* Routes protégées — authentification requise */}
         <Route element={<PrivateRoute />}>
           <Route path="/home" element={<HomePage />} />
+          <Route
+            path="/game/remote"
+            element={<GamePage sessionId={null} gameMode={'remote'} />}
+          ></Route>
+          <Route
+            path="/game/local"
+            element={<GamePage sessionId={null} gameMode={'local'} />}
+          ></Route>
           <Route path="/me" element={<MyProfilePage />} />
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/tournaments/*" element={<TournamentRoutes />} />
-          <Route path="/game/local" element={<GamePage sessionId={null} />} />
           <Route path="/game/pong-ai" element={<PlayAiPage />} />
         </Route>
 
