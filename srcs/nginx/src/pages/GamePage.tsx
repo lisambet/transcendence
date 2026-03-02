@@ -12,7 +12,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/api-client';
 import Button from '../components/atoms/Button';
 import { createAiSession, joinAiToSession } from '../api/game-api';
-import type { GameState } from '../hooks/GameState';
 
 export interface Paddle {
   y: number;
@@ -159,7 +158,10 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
         }
       });
 
-      if (cancelled) { ws.close(); return; }
+      if (cancelled) {
+        ws.close();
+        return;
+      }
       wsRef.current = ws;
 
       ws.addEventListener('close', () => {
@@ -203,7 +205,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
         colorEnd={colors.end}
       >
         <NavBar />
-        <div className="flex flex-row flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden">
           {/* Sidebar */}
           <div className="flex flex-col flex-[1] items-center justify-between overflow-y-auto p-4 gap-4">
             {gameMode === 'remote' ? (
@@ -235,10 +237,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
                 className="absolute inset-0 flex flex-col items-center justify-center gap-6"
                 style={{ background: 'rgba(2,6,23,0.85)', backdropFilter: 'blur(4px)' }}
               >
-                <p
-                  className="text-3xl font-bold font-mono"
-                  style={{ color: winnerColor }}
-                >
+                <p className="text-3xl font-bold font-mono" style={{ color: winnerColor }}>
                   {winnerLabel()}
                 </p>
                 <p className="text-slate-400 font-mono text-lg">
