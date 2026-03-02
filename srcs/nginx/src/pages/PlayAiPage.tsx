@@ -29,7 +29,6 @@ export const PlayAiPage = () => {
   const [scores, setScores] = useState({ left: 0, right: 0 });
   const wsRef = useRef<WebSocket | null>(null);
   const phaseRef = useRef<'idle' | 'playing' | 'gameOver'>('idle');
-  // Track last known scores in a ref to avoid re-renders on every frame
   const scoresRef = useRef({ left: 0, right: 0 });
   const navigate = useNavigate();
 
@@ -75,7 +74,6 @@ export const PlayAiPage = () => {
         if (message.type === 'state' && message.data) {
           phaseRef.current = 'playing';
           updateGameState(message.data);
-          // Only trigger a React re-render when the score actually changes
           const s = message.data.scores;
           if (s.left !== scoresRef.current.left || s.right !== scoresRef.current.right) {
             scoresRef.current = { left: s.left, right: s.right };
@@ -122,20 +120,22 @@ export const PlayAiPage = () => {
       <Background grainIntensity={4} baseFrequency={0.28} colorStart="#00ff9f" colorEnd="#0088ff">
         <NavBar />
         <div className="flex flex-row flex-1 overflow-hidden">
-          <div className="flex flex-col flex-[1] overflow-y-auto p-4">
-            <GameControl
-              onCreateLocalGame={createSession}
-              onStartGame={onStartGame}
-              onExitGame={onExitGame}
-              gameMode="local"
-              loading={isLoading}
-            />
+          {/* Sidebar: scores on top, controls centered at bottom */}
+          <div className="flex flex-col flex-[1] items-center justify-between p-4 gap-4">
             <GameStatusBar
               sessionsData={null}
               scoreLeft={scores.left}
               scoreRight={scores.right}
               labelLeft="YOU"
               labelRight="AI"
+            />
+            <GameControl
+              onCreateLocalGame={createSession}
+              onStartGame={onStartGame}
+              onExitGame={onExitGame}
+              gameMode="local"
+              loading={isLoading}
+              className="flex-col w-full"
             />
           </div>
 
