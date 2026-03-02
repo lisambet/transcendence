@@ -2,6 +2,15 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { proxyRequest, webSocketProxyRequest } from '../utils/proxy.js';
 import { GATEWAY_CONFIG } from '../utils/constants.js';
 import { fetchOptions } from '../utils/mtlsAgent.js';
+import { getInternalHeaders } from '../index.js';
+
+function getProxyHeaders(request: FastifyRequest): HeadersInit {
+  const internalHeaders = getInternalHeaders(request);
+  return {
+    'Content-Type': request.headers['content-type'] || 'application/json',
+    ...internalHeaders,
+  };
+}
 
 export function registerGameRoutes(app: FastifyInstance) {
   // Regular HTTP routes
@@ -51,11 +60,6 @@ export function registerGameRoutes(app: FastifyInstance) {
     return res;
   });
 
-  // // // WebSocket proxy route for /api/game/ws
-  // app.get('/ws', { websocket: true }, (connection: any, request: FastifyRequest) => {
-  //   webSocketProxyRequest(app, connection, request, '/ws');
-  // });
-
   // WebSocket proxy route for /api/game/:sessionId (dynamic session IDs)
   // add ws because /:sessionId  intercept all routes
   app.get('/ws/:sessionId', { websocket: true }, (connection: any, request: FastifyRequest) => {
@@ -80,10 +84,13 @@ export function registerGameRoutes(app: FastifyInstance) {
 
     const init: RequestInit = {
       method: request.method,
+      headers: getProxyHeaders(request),
     };
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {
-      init.body = JSON.stringify(request.body);
+      // Avoid circcular structure JSON.stringify by cleaning the body if it exists
+      const cleanBody = request.body ? { ...request.body } : undefined;
+      init.body = cleanBody ? JSON.stringify(cleanBody) : undefined;
     }
 
     const res = await proxyRequest(app, request, reply, fullUrl, init);

@@ -2,9 +2,10 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import { env } from '../config/env.js';
-import { UserEvent, TournamentDTO, ERR_DEFS } from '@transcendence/core';
+import { UserEvent, TournamentDTO,MatchToPlayDTO, ERR_DEFS } from '@transcendence/core';
 import { AppError, ErrorDetail } from '@transcendence/core';
 import { randomUUID } from 'crypto';
+import { LOG_REASONS } from '@transcendence/core';
 
 // DB path
 const DEFAULT_DIR = path.join(process.cwd(), 'data');
@@ -57,8 +58,10 @@ CREATE TABLE IF NOT EXISTS tournament_player(
     tournament_id INTEGER NOT NULL,
     player_id INTEGER NOT NULL,
     final_position INTEGER, -- NULL | 1 | 2 | 3 | 4
+    slot INTEGER, --1 | 2 | 3 | 4, corresponds to the slot of the creator in the tournament
     FOREIGN KEY (tournament_id) REFERENCES tournament(id) ON DELETE CASCADE,
     FOREIGN KEY (player_id) REFERENCES player(id) ON DELETE CASCADE,
+    UNIQUE( tournament_id, slot ),
     PRIMARY KEY (tournament_id, player_id)
 );
 
@@ -95,8 +98,8 @@ VALUES (?,?)
 `);
 
 const addPlayerTournamentStmt = db.prepare(`
-INSERT INTO tournament_player(player_id, tournament_id)
-VALUES(?,?)
+INSERT INTO tournament_player(player_id, tournament_id, slot)
+VALUES(?, ?, ?)
 `);
 
 const addPlayerPositionTournamentStmt = db.prepare(`
@@ -148,11 +151,11 @@ WHERE id = ?
 `);
 
 const listPlayersTournamentStmt = db.prepare(`
-SELECT tp.player_id, p.username, p.avatar
+SELECT tp.player_id, p.username, p.avatar, tp.slot
 FROM tournament_player tp
-LEFT JOIN player p
-ON  tp.player_id = p.id
+LEFT JOIN player p ON tp.player_id = p.id
 WHERE tournament_id = ?
+ORDER BY tp.slot ASC
 `);
 
 const isPlayerInTournamentStmt = db.prepare(`
@@ -174,7 +177,7 @@ WHERE player1 = ? OR player2 = ?`);
 export function createTournament(player_id: number): number {
   try {
     const idtournament = createTournamentStmt.run(player_id, Date.now());
-    addPlayerTournament(player_id, Number(idtournament.lastInsertRowid));
+    addPlayerTournament(player_id, Number(idtournament.lastInsertRowid), 1);
     return Number(idtournament.lastInsertRowid);
   } catch (err: unknown) {
     throw new AppError(
@@ -185,13 +188,13 @@ export function createTournament(player_id: number): number {
   }
 }
 
-export function addPlayerTournament(player: number, tournament: number) {
+export function addPlayerTournament(player: number, tournament_id: number, slot: number = 0) {
   try {
-    addPlayerTournamentStmt.run(player, tournament);
+    addPlayerTournamentStmt.run(player, tournament_id, slot);
   } catch (err: unknown) {
     throw new AppError(
       ERR_DEFS.DB_UPDATE_ERROR,
-      { details: [{ field: `addPlayerTournament ${player} ${tournament}` }] },
+      { details: [{ field: `addPlayerTournament ${player} ${tournament_id}` }] },
       err,
     );
   }
@@ -250,11 +253,11 @@ export function joinTournament(player_id: number, tournament_id: number) {
         const errorDetail: ErrorDetail = {
           field: `tournament full: ${tournament_id}`,
           message: 'Tournament is already full',
-          reason: 'tournament_full',
+          reason: LOG_REASONS.TOURNAMENT.FULL,
         };
         throw new AppError(ERR_DEFS.DB_UPDATE_ERROR, { details: [errorDetail] });
       }
-      addPlayerTournament(player_id, tournament_id);
+      addPlayerTournament(player_id, tournament_id, nbPlayers + 1);
       if (nbPlayers === 3) {
         changeStatusTournamentStmt.run('STARTED', tournament_id);
         initializeTournamentMatchs(tournament_id);
@@ -288,7 +291,7 @@ function initializeTournamentMatchs(tournament_id: number) {
     const errorDetail: ErrorDetail = {
       field: `Invalid player count: ${tournament_id}`,
       message: 'Tournament invalid player count',
-      reason: 'tournament_count_error',
+      reason: LOG_REASONS.TOURNAMENT.COUNT,
     };
     throw new AppError(ERR_DEFS.DB_UPDATE_ERROR, { details: [errorDetail] });
   }
@@ -368,39 +371,34 @@ SET player2 = ?
 WHERE id = ?
 `);
 
-export function getSessionGame(tournamentId: number | null, userId: number | null): string | null {
+const getMatchToPlayStmt = db.prepare(`
+SELECT sessionId , round, player1, player2
+FROM match
+WHERE tournament_id = ?
+  AND (player1 = ? OR player2 = ?)
+  AND player2 IS NOT NULL
+  AND player1 IS NOT NULL
+  AND sessionId IS NOT NULL
+  AND winner_id IS NULL
+`);
+
+export function getMatchToPlay(tournament_id: number, userId: number): MatchToPlayDTO | null {
   try {
-    const tournamentHaveMatch = getMatchSmt.all(tournamentId) as {
-      sessionId: string | null;
-      round: string;
-      player1: number;
-      player2: number | null;
-      id: number | null;
-    }[];
-    const nbMatch = tournamentHaveMatch.length;
-    if (nbMatch === 0)
-      createPlayer1Match.run(tournamentId, userId, 'SEMI_1', randomUUID(), Date.now());
-    else if (nbMatch === 1 && tournamentHaveMatch[0].player2 == null)
-      createPlayer2Match.run(userId, tournamentHaveMatch[0].id);
-    else if (nbMatch === 1 && tournamentHaveMatch[0].player2 != null)
-      createPlayer1Match.run(tournamentId, userId, 'SEMI_2', randomUUID(), Date.now());
-    else if (nbMatch === 2 && tournamentHaveMatch[1].player2 == null)
-      createPlayer2Match.run(userId, tournamentHaveMatch[1].id);
-    else if (nbMatch === 2 && tournamentHaveMatch[1].player2 != null)
-      createPlayer1Match.run(tournamentId, userId, 'LITTLE_FINAL', randomUUID(), Date.now());
-    else if (nbMatch === 3 && tournamentHaveMatch[2].player2 == null)
-      createPlayer2Match.run(userId, tournamentHaveMatch[0].id);
-    else if (nbMatch === 3 && tournamentHaveMatch[2].player2 != null)
-      createPlayer1Match.run(tournamentId, userId, 'FINAL', randomUUID(), Date.now());
-    else if (nbMatch === 4 && tournamentHaveMatch[3].player2 == null)
-      createPlayer2Match.run(userId, tournamentHaveMatch[0].id);
-    else throw new Error(`Maximum number of match reached`);
-    const sessionId = nbMatch > 0 ? tournamentHaveMatch[nbMatch - 1].sessionId : null;
-    return sessionId;
+    const match = getMatchToPlayStmt.get(tournament_id, userId, userId) as MatchToPlayDTO | null;
+    if (!match) {
+      const errorDetail: ErrorDetail = {
+        field: `No match to play for user ${userId} in tournament ${tournament_id}`,
+        message: 'No match to play',
+        reason: LOG_REASONS.TOURNAMENT.NO_MATCH_TO_PLAY,
+      };
+      throw new AppError(ERR_DEFS.DB_SELECT_ERROR,{ details: [errorDetail] });
+    }
+    return match;
   } catch (err: unknown) {
+    if (err instanceof AppError) throw err;
     throw new AppError(
-      ERR_DEFS.DB_INSERT_ERROR,
-      { details: [{ field: `getSessionGame tournamentId:${tournamentId} userId:${userId}` }] },
+      ERR_DEFS.DB_SELECT_ERROR,
+      { details: [{ field: `getMatchToPlay tournamentId:${tournament_id} userId:${userId}` }] },
       err,
     );
   }

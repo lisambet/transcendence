@@ -10,7 +10,7 @@ import { useKeyboardControls } from '../hooks/input.tsx';
 import { useGameSessions, UseGameSessionsReturn } from '../hooks/GameSessions';
 import { useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
-
+import api from '../api/api-client';
 export interface Paddle {
   y: number;
   height: number;
@@ -94,16 +94,26 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
       ...(tournamentId ? { tournamentId } : {}),
     };
 
-    const res = await fetch('/api/game/create-session', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-    const data = await res.json();
-    if (res.ok && data.sessionId) {
+    // const res = await fetch('/api/game/create-session', {
+    //   method: 'POST',
+    //   credentials: 'include',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify(requestBody),
+    // });
+    interface CreateSessionResponse {
+      status: 'success' | 'failure';
+      message: string;
+      sessionId?: string;
+      wsUrl?: string;
+    }
+    const res = await api.post<CreateSessionResponse>('/game/create-session', requestBody);
+
+    // const data = await res.json();
+    const data = res.data;
+    // if (res.ok && data.sessionId) {
+    if (data.sessionId) {
       console.log('Success');
       setSessionId(data.sessionId);
     }

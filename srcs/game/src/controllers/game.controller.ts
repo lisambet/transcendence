@@ -94,19 +94,21 @@ export async function gameSettings(this: FastifyInstance, req: FastifyRequest) {
   };
 }
 
-export async function newGameSession(this: FastifyInstance, req: FastifyRequest) {
+export async function newGameSession(req: FastifyRequest, reply: FastifyReply) {
+  req.server.log.info(`Creating new session------`);
   const body = req.body as {
     gameMode: string;
     tournamentId?: number;
   };
-  const idHeader = (req.headers as any)['x-user-id'];
-  const userId = idHeader ? Number(idHeader) : null;
+  req.server.log.info(`Creating new session with body: ${body}`);
+  const userId = req.user.id;
+  req.server.log.info(`Creating new session with user id: ${userId}`);
   let sessionId = null;
   if (body.gameMode === 'tournament')
-    sessionId = db.getSessionGame(body.tournamentId || null, userId);
+    sessionId = db.getMatchToPlay(body.tournamentId!, userId!)?.sessionId;
   else sessionId = randomUUID();
-  this.log.info(`Creating new session with mode: ${body.gameMode}`);
-  const sessionData = getSessionData.call(this, null, sessionId, body.gameMode);
+  req.server.log.info(`Creating new session with mode: ${body.gameMode}`);
+  const sessionData = getSessionData.call(req.server, null, sessionId, body.gameMode);
   if (!sessionData) {
     return {
       status: 'failure',
@@ -164,13 +166,8 @@ export async function webSocketConnect(
 }
 
 export async function newTournament(req: FastifyRequest, reply: FastifyReply) {
-  const idHeader = (req.headers as any)['x-user-id'];
-  const userId = idHeader ? Number(idHeader) : null;
-  if (!userId)
-    return reply.code(500).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
-  const userExist = db.getUser(userId);
-  if (!userExist)
-    return reply.code(500).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
+  const userId = req.user.id;
+  req.server.log.info(`Creating new tournament for user: ${userId}`);
   const tournament_id = db.createTournament(userId);
   return reply.code(200).send(tournament_id);
 }
@@ -188,13 +185,16 @@ export async function joinTournament(
   const idHeader = (req.headers as any)['x-user-id'];
   const userId = idHeader ? Number(idHeader) : null;
   if (!userId)
-    return reply.code(500).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
+    return reply.code(400).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
+  const userExist = db.getUser(userId);
+  if (!userExist)
+    return reply.code(400).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
   try {
     db.joinTournament(userId, tourId);
   } catch (err: unknown) {
     if (err instanceof AppError) {
       const isTournamentFull = err.context?.details?.some(
-        (d: any) => d.reason === 'tournament_full',
+        (d: any) => d.reason === LOG_REASONS.TOURNAMENT.FULL,
       );
       if (isTournamentFull) return reply.code(409).send({ message: err.message });
     } else {
@@ -202,6 +202,30 @@ export async function joinTournament(
     }
   }
   return reply.code(200).send({ joining: tourId });
+}
+
+export function getMatchToPlay(
+  req: FastifyRequest<{ Params: TournamentParams }>,
+  reply: FastifyReply,
+) {
+  const tourId = Number(req.params.id);
+  const idHeader = (req.headers as any)['x-user-id'];
+  const userId = idHeader ? Number(idHeader) : null;
+  if (!userId)
+    return reply.code(400).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
+  try {
+    const matchToPlay = db.getMatchToPlay(tourId, userId);
+    return reply.code(200).send(matchToPlay);
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      const isNoMatchToPlay = err.context?.details?.some(
+        (d: any) => d.reason === LOG_REASONS.TOURNAMENT.NO_MATCH_TO_PLAY,
+      );
+      if (isNoMatchToPlay) return reply.code(404).send({ message: err.message });
+    } else {
+      throw err;
+    }
+  }
 }
 
 // RL API: Reset game session
