@@ -51,7 +51,7 @@
   },
   "companyName": "Patapong SA",
   "serviceName": "Spin Pong",
-  "address": "1, Avenue des Frères Lebrun",
+  "address": "1, Avenue des Fr\u00e8res Lebrun",
   "email": "ping@patapong.com",
   "governingLaw": "French law",
   "arbitrationLocation": "Poitiers, France",
@@ -258,13 +258,13 @@
     "verify": "Verify",
     "verifying": "Verifying...",
     "cancel": "Cancel",
-    "invalid_code_with_attempts": "Invalid code — {{count}} attempt(s) remaining",
+    "invalid_code_with_attempts": "Invalid code \u2014 {{count}} attempt(s) remaining",
     "help_text": "Open your authenticator app to get the code",
     "apps_button": "Compatible apps",
     "apps_title": "TOTP Authenticator Apps",
     "forgot_code": "Lost or forgotten code?",
     "forgot_help_text": "If you no longer have access to your 2FA app, visit the FAQ for account recovery steps.",
-    "faq_link": "View FAQ → account access & recovery",
+    "faq_link": "View FAQ \u2192 account access & recovery",
     "status_load_error": "Failed to load 2FA status",
     "setup": {
       "title": "Two-Factor Authentication Setup",
@@ -299,7 +299,7 @@
     "drag": "Or drag and drop it here"
   },
   "footer": {
-    "copyright": "© 2026 . All rights reserved.",
+    "copyright": "\u00a9 2026 . All rights reserved.",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service"
   },
@@ -327,11 +327,18 @@
     "little_final": "Little-Finale",
     "start": "Start Game",
     "exit": "Exit",
+    "play_again": "Play Again",
     "run": "Launch Tournament",
     "friends": "Friends",
     "waitiing": "Waiting...",
     "creating": "Creating tournament...",
-    "tournament_full": "This tournament is full(maximum 4 players)."
+    "tournament_full": "This tournament is full(maximum 4 players).",
+    "winner": {
+      "you_win": "\ud83c\udfc6 You Win!",
+      "ai_wins": "\ud83e\udd16 AI Wins!",
+      "player1_wins": "\ud83c\udfc6 Player 1 Wins!",
+      "player2_wins": "\ud83c\udfc6 Player 2 Wins!"
+    }
   },
   "stats": {
     "title": "Player Statistics",

@@ -6,12 +6,14 @@ import GameControl from '../components/organisms/GameControl';
 import { useGameState } from '../hooks/GameState';
 import { useGameWebSocket } from '../hooks/GameWebSocket';
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useKeyboardControls } from '../hooks/input.tsx';
 import { useGameSessions, UseGameSessionsReturn } from '../hooks/GameSessions';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/api-client';
 import Button from '../components/atoms/Button';
 import { createAiSession, joinAiToSession } from '../api/game-api';
+import type { GameState } from '../hooks/GameState';
 
 export interface Paddle {
   y: number;
@@ -59,6 +61,7 @@ interface GamePageProps {
 }
 
 export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
+  const { t } = useTranslation('common');
   const { openWebSocket, closeWebSocket } = useGameWebSocket();
   const { gameStateRef, updateGameState } = useGameState();
   const [currentSessionId, setSessionId] = useState<string | null>(sessionId);
@@ -125,7 +128,6 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   const onStartGame = async () => {
     if (!wsRef.current) return;
     if (gameMode === 'ai') {
-      // First let the AI join, then send start
       const id = sessionIdRef.current;
       if (id) await joinAiToSession(id);
     }
@@ -168,10 +170,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
         }
       });
 
-      if (cancelled) {
-        ws.close();
-        return;
-      }
+      if (cancelled) { ws.close(); return; }
       wsRef.current = ws;
 
       ws.addEventListener('close', () => {
@@ -192,14 +191,14 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   const sessions = useGameSessions() as UseGameSessionsReturn;
 
   // ── Labels ────────────────────────────────────────────────────────
-  const labelLeft = gameMode === 'ai' ? 'YOU' : 'Player 1';
-  const labelRight = gameMode === 'ai' ? 'AI' : 'Player 2';
+  const labelLeft = gameMode === 'ai' ? t('game.winner.you_label') : t('game.winner.player1_label');
+  const labelRight = gameMode === 'ai' ? t('game.winner.ai_label') : t('game.winner.player2_label');
 
   // ── Game Over ────────────────────────────────────────────────────
-  const winnerLabel = () => {
+  const winnerLabel = (): string => {
     if (!winner) return '';
-    if (gameMode === 'ai') return winner === 'left' ? 'You Win!' : 'AI Wins!';
-    return winner === 'left' ? 'Player 1 Wins!' : 'Player 2 Wins!';
+    if (gameMode === 'ai') return winner === 'left' ? t('game.winner.you_win') : t('game.winner.ai_wins');
+    return winner === 'left' ? t('game.winner.player1_wins') : t('game.winner.player2_wins');
   };
   const winnerColor = winner === 'left' ? '#34d399' : '#fb7185';
 
@@ -251,7 +250,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
                   {scores.left} — {scores.right}
                 </p>
                 <Button variant="secondary" type="button" onClick={createSession}>
-                  Play Again
+                  {t('game.play_again')}
                 </Button>
               </div>
             )}
