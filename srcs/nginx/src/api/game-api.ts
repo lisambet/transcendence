@@ -25,6 +25,8 @@ export const useLocalSession = () => {
     try {
       const response = await fetch('/api/game/create-session', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
         credentials: 'include',
       });
 
@@ -59,7 +61,7 @@ export const useLocalSession = () => {
 };
 
 export async function createAiSession(): Promise<{ sessionId: string; wsUrl: string }> {
-  const res = await api.post('/game/create-session');
+  const res = await api.post('/game/create-session', {});
   return res.data; // { sessionId, wsUrl }
 }
 
