@@ -12,6 +12,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/api-client';
 import Button from '../components/atoms/Button';
 import { createAiSession, joinAiToSession } from '../api/game-api';
+import type { GameState } from '../hooks/GameState';
 
 export interface Paddle {
   y: number;
@@ -69,6 +70,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   const wsRef = useRef<WebSocket | null>(null);
   const phaseRef = useRef<'idle' | 'playing' | 'gameOver'>('idle');
   const scoresRef = useRef({ left: 0, right: 0 });
+  const sessionIdRef = useRef<string | null>(null);
   const { tournamentId } = useParams<{ tournamentId?: string }>();
   const navigate = useNavigate();
 
@@ -92,6 +94,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
     if (gameMode === 'ai') {
       const { sessionId: newId } = await createAiSession();
       setSessionId(newId);
+      sessionIdRef.current = newId;
     } else {
       interface CreateSessionResponse {
         status: 'success' | 'failure';
@@ -104,7 +107,10 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
         ...(tournamentId ? { tournamentId } : {}),
       };
       const res = await api.post<CreateSessionResponse>('/game/create-session', requestBody);
-      if (res.data.sessionId) setSessionId(res.data.sessionId);
+      if (res.data.sessionId) {
+        setSessionId(res.data.sessionId);
+        sessionIdRef.current = res.data.sessionId;
+      }
     }
     setIsLoading(false);
   }, [closeWebSocket, gameMode, tournamentId]);
@@ -117,8 +123,13 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   }, []);
 
   // ── Controls ──────────────────────────────────────────────────────
-  const onStartGame = () => {
+  const onStartGame = async () => {
     if (!wsRef.current) return;
+    if (gameMode === 'ai') {
+      // First let the AI join, then send start
+      const id = sessionIdRef.current;
+      if (id) await joinAiToSession(id);
+    }
     wsRef.current.send(JSON.stringify({ type: 'start' }));
   };
 
@@ -158,18 +169,12 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
         }
       });
 
-      if (cancelled) {
-        ws.close();
-        return;
-      }
+      if (cancelled) { ws.close(); return; }
       wsRef.current = ws;
 
       ws.addEventListener('close', () => {
         if (phaseRef.current !== 'gameOver') setIsGameOver(false);
       });
-
-      // AI: tell pong-ai service to join
-      if (gameMode === 'ai') await joinAiToSession(currentSessionId);
     };
 
     connect();
@@ -188,7 +193,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   const labelLeft = gameMode === 'ai' ? 'YOU' : 'Player 1';
   const labelRight = gameMode === 'ai' ? 'AI' : 'Player 2';
 
-  // ── Game Over winner label ────────────────────────────────────────
+  // ── Game Over ────────────────────────────────────────────────────
   const winnerLabel = () => {
     if (!winner) return '';
     if (gameMode === 'ai') return winner === 'left' ? '🏆 You Win!' : '🤖 AI Wins!';
@@ -206,8 +211,8 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
       >
         <NavBar />
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <div className="flex flex-col flex-[1] items-center justify-between overflow-y-auto p-4 gap-4">
+          {/* Top bar: scores + controls */}
+          <div className="flex flex-col items-center p-4 gap-4">
             {gameMode === 'remote' ? (
               <GameStatusBar sessionsData={sessions} onSelectSession={handleSelectSession} />
             ) : (
@@ -225,12 +230,12 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
               onExitGame={onExitGame}
               gameMode={gameMode}
               loading={isLoading}
-              className="flex-col w-full"
+              className="w-full"
             />
           </div>
 
-          {/* Arena + Game Over overlay */}
-          <div className="flex-[3] flex justify-center p-4 relative">
+          {/* Arena */}
+          <div className="flex-1 flex justify-center px-4 pb-4 relative">
             <Arena gameStateRef={gameStateRef} />
             {isGameOver && (
               <div
