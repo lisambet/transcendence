@@ -69,39 +69,27 @@ interface GamePageProps {
   gameMode: 'local' | 'remote' | 'tournament';
 }
 
-// export const GamePage = ({ sessionId: routeSessionId }: { sessionId: string | null }) => {
 export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   const { openWebSocket, closeWebSocket } = useGameWebSocket();
   const { gameStateRef, updateGameState } = useGameState();
   const [currentSessionId, setSessionId] = useState<string | null>(sessionId);
   const [isLoading, setIsLoading] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null); // Use ref instead of state
+  const wsRef = useRef<WebSocket | null>(null);
   const { tournamentId } = useParams<{ tournamentId?: string }>();
   const navigate = useNavigate();
 
   useKeyboardControls({
     wsRef,
     gameMode,
-    enabled: !!currentSessionId, // Only enable when connected
+    enabled: !!currentSessionId,
   });
 
   const createLocalSession = async () => {
     setIsLoading(true);
-    console.log('Fetching sessions from backend...');
-    // Build request body conditionally
     const requestBody = {
       gameMode: gameMode,
       ...(tournamentId ? { tournamentId } : {}),
     };
-
-    // const res = await fetch('/api/game/create-session', {
-    //   method: 'POST',
-    //   credentials: 'include',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify(requestBody),
-    // });
     interface CreateSessionResponse {
       status: 'success' | 'failure';
       message: string;
@@ -109,12 +97,8 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
       wsUrl?: string;
     }
     const res = await api.post<CreateSessionResponse>('/game/create-session', requestBody);
-
-    // const data = await res.json();
     const data = res.data;
-    // if (res.ok && data.sessionId) {
     if (data.sessionId) {
-      console.log('Success');
       setSessionId(data.sessionId);
     }
     setIsLoading(false);
@@ -125,24 +109,17 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
       console.error('WebSocket not connected');
       return;
     }
-
-    console.log('📤 Sending start message');
     wsRef.current.send(JSON.stringify({ type: 'start' }));
   };
 
   const onExitGame = async () => {
-    if (!currentSessionId) {
-      console.log('no Session');
-      return;
-    }
+    if (!currentSessionId) return;
     const res = await fetch(`/api/game/del/${currentSessionId}`, {
       method: 'DELETE',
       credentials: 'include',
     });
-    console.log('EXIIIT');
     const data = await res.json();
     if (res.ok && data.message) {
-      console.log(data.message);
       navigate('/home');
     }
   };
@@ -150,9 +127,8 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   useEffect(() => {
     if (gameMode === 'local' && !currentSessionId) {
       createLocalSession();
-      console.log('Auto-creating local session...');
     }
-  }, [gameMode, currentSessionId]); // Only run when gameMode changes (on mount)
+  }, [gameMode, currentSessionId]);
 
   useEffect(() => {
     if (!currentSessionId) return;
@@ -163,16 +139,12 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
             updateGameState(message.data);
           }
         });
-
-        wsRef.current = ws; // Store WebSocket in ref
+        wsRef.current = ws;
       } catch (error) {
         console.error('Failed to connect WebSocket:', error);
       }
     };
-
     connectWebSocket();
-
-    // Cleanup on unmount or sessionId change
     return () => {
       closeWebSocket();
       wsRef.current = null;
@@ -180,14 +152,12 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   }, [currentSessionId, openWebSocket, updateGameState, closeWebSocket]);
 
   const handleSelectSession = (selectedSessionId: string) => {
-    console.log('Selected session:', selectedSessionId);
     setSessionId(selectedSessionId);
-    // navigate('game/remote');
   };
   const sessions = useGameSessions() as UseGameSessionsReturn;
 
   return (
-    <div className={`w-full h-full relative`}>
+    <div className="w-full h-full relative">
       <Background
         grainIntensity={4}
         baseFrequency={0.28}
@@ -196,27 +166,23 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
       >
         <NavBar />
         <div className="flex flex-row flex-1 overflow-hidden">
-          {' '}
-          {/* Added flex-1 and overflow-hidden */}
-          <div className="flex flex-col flex-[1] overflow-y-auto p-4">
-            {' '}
-            {/* Added overflow and padding */}
+          {/* Sidebar: scores on top, controls centered at bottom */}
+          <div className="flex flex-col flex-[1] items-center justify-between p-4 gap-4">
+            {gameMode === 'remote' ? (
+              <GameStatusBar sessionsData={sessions} onSelectSession={handleSelectSession} />
+            ) : (
+              <GameStatusBar sessionsData={null} />
+            )}
             <GameControl
               onCreateLocalGame={createLocalSession}
               onStartGame={onStartGame}
               onExitGame={onExitGame}
               gameMode={gameMode}
               loading={isLoading}
+              className="flex-col w-full"
             />
-            {gameMode === 'remote' ? (
-              <GameStatusBar sessionsData={sessions} onSelectSession={handleSelectSession} />
-            ) : (
-              <GameStatusBar sessionsData={null} />
-            )}
           </div>
           <div className="flex-[3] flex justify-center p-4">
-            {' '}
-            {/* Added flex centering */}
             <Arena gameStateRef={gameStateRef} />
           </div>
         </div>
