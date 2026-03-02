@@ -12,7 +12,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/api-client';
 import Button from '../components/atoms/Button';
 import { createAiSession, joinAiToSession } from '../api/game-api';
-import type { GameState } from '../hooks/GameState';
 
 export interface Paddle {
   y: number;
