@@ -165,7 +165,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
         colorEnd={colors.end}
       >
         <NavBar />
-        <div className="flex flex-row flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden">
           {/* Sidebar: scores on top, controls centered at bottom */}
           <div className="flex flex-col flex-[1] items-center justify-between p-4 gap-4">
             {gameMode === 'remote' ? (

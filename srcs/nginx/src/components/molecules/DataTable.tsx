@@ -39,7 +39,7 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   return (
     <div className="w-[70%] max-w-5xl mx-auto my-12">
-      <div className="bg-white rounded-3xl shadow-2xl p-8 border border-cyan-300">
+      <div className="bg-white/70 rounded-3xl shadow-2xl p-8 border border-cyan-300">
         <h2 className="text-2xl font-semibold text-center mb-6 text-gray-700 font-quantico">
           {title}
         </h2>
@@ -57,10 +57,7 @@ export function DataTable<T>({
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={columns.length}
-                    className="py-10 text-center text-gray-500"
-                  >
+                  <td colSpan={columns.length} className="py-10 text-center text-gray-500">
                     {emptyMessage}
                   </td>
                 </tr>
@@ -104,8 +101,7 @@ export function DataCardList<T>({
   renderCard,
   emptyMessage = 'No data.',
 }: DataCardListProps<T>) {
-  if (rows.length === 0)
-    return <p className="text-center text-gray-500 py-10">{emptyMessage}</p>;
+  if (rows.length === 0) return <p className="text-center text-gray-500 py-10">{emptyMessage}</p>;
   return (
     <>
       {rows.map((row) => (

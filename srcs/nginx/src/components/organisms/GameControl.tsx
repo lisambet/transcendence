@@ -21,7 +21,7 @@ const GameControl = ({
   const { t } = useTranslation('common');
 
   return (
-    <div className={`flex gap-4 ${className}`}>
+    <div className={`flex flex-row justify-center gap-4 ${className}`}>
       {gameMode === 'remote' && (
         <Button
           id="create-game-btn"
@@ -34,12 +34,7 @@ const GameControl = ({
         </Button>
       )}
 
-      <Button
-        id="start-game-btn"
-        variant="secondary"
-        type="button"
-        onClick={onStartGame}
-      >
+      <Button id="start-game-btn" variant="secondary" type="button" onClick={onStartGame}>
         {t('game.start')}
       </Button>
 
