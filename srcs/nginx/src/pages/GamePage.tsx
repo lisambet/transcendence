@@ -169,7 +169,10 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
         }
       });
 
-      if (cancelled) { ws.close(); return; }
+      if (cancelled) {
+        ws.close();
+        return;
+      }
       wsRef.current = ws;
 
       ws.addEventListener('close', () => {
@@ -196,8 +199,8 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   // ── Game Over ────────────────────────────────────────────────────
   const winnerLabel = () => {
     if (!winner) return '';
-    if (gameMode === 'ai') return winner === 'left' ? '🏆 You Win!' : '🤖 AI Wins!';
-    return winner === 'left' ? '🏆 Player 1 Wins!' : '🏆 Player 2 Wins!';
+    if (gameMode === 'ai') return winner === 'left' ? 'You Win!' : 'AI Wins!';
+    return winner === 'left' ? 'Player 1 Wins!' : 'Player 2 Wins!';
   };
   const winnerColor = winner === 'left' ? '#34d399' : '#fb7185';
 
