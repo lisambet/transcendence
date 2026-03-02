@@ -85,9 +85,7 @@
   "privacy_policy": {
     "title": "Privacy Policy",
     "last_updated": "Last Updated: February 24, 2026",
-
     "intro": "{{companyName}} (\"we\", \"us\", or \"our\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our services.",
-
     "summary": {
       "title": "Summary of Key Points",
       "description": "This summary provides key points from our Privacy Policy. Click on the links below to jump to the section you are interested in.",
@@ -105,7 +103,7 @@
       },
       "how_process": {
         "title": "How do we process your information?",
-        "description": "We process your information to provide, improve, and administer our services, and to comply with the law."
+        "description": "We process your information to provide, improve, and administer our Services, communicate with you, for security and fraud prevention, and to comply with the law."
       },
       "share_info": {
         "title": "When and with whom do we share your personal information?",
@@ -116,9 +114,7 @@
         "description": "Depending on your location, you may have the right to access, update, or delete your personal information."
       }
     },
-
     "table_of_contents": "Table of Contents",
-
     "toc": {
       "info_collect": "1. What Information Do We Collect?",
       "info_use": "2. How Do We Process Your Information?",
@@ -133,7 +129,6 @@
       "policy_updates": "11. Do We Make Updates to This Notice?",
       "contact": "12. How Can You Contact Us About This Notice?"
     },
-
     "info_collect": {
       "title": "1. What Information Do We Collect?",
       "personal_info": {
@@ -145,12 +140,10 @@
         "description": "We automatically collect certain information when you visit, use, or navigate the Services. This information does not reveal your specific identity but may include device and usage information, such as your IP address, browser and device characteristics, operating system, and other technical information."
       }
     },
-
     "info_use": {
       "title": "2. How Do We Process Your Information?",
       "description": "We process your personal information for a variety of reasons, depending on how you interact with our Services, including to provide, improve, and administer our Services, communicate with you, for security and fraud prevention, and to comply with law."
     },
-
     "who_share": {
       "title": "3. When and With Whom Do We Share Your Personal Information?",
       "description": "We may share your information in specific situations described in this section and/or with the following third parties:",
@@ -158,48 +151,39 @@
       "affiliates": "Affiliates: We may share your information with our affiliates, in which case we will require those affiliates to honor this Privacy Policy.",
       "business_partners": "Business Partners: We may share your information with our business partners to offer you certain products, services, or promotions."
     },
-
     "cookies": {
       "title": "4. Do We Use Cookies and Other Tracking Technologies?",
       "description": "We may use cookies and similar tracking technologies to collect and store your information. These technologies help us maintain the security of our Services, prevent crashes, and analyze usage."
     },
-
     "social_logins": {
       "title": "5. How Do We Handle Your Social Logins?",
       "description": "If you choose to register or log in to our Services using a social media account, we may have access to certain information about you from your social media provider."
     },
-
     "intl_transfers": {
       "title": "6. Is Your Information Transferred Internationally?",
       "description": "Your information may be transferred to, stored, and processed in countries other than your own. We will take all necessary measures to protect your personal information in accordance with this Privacy Policy and applicable law."
     },
-
     "info_retain": {
       "title": "7. How Long Do We Keep Your Information?",
       "description": "We will only keep your personal information for as long as it is necessary for the purposes set out in this Privacy Policy, unless a longer retention period is required or permitted by law."
     },
-
     "info_minors": {
       "title": "8. Do We Collect Information From Minors?",
       "description": "We do not knowingly collect data from or market to children under 18 years of age. If we learn that personal information from users less than 18 years of age has been collected, we will deactivate the account and take reasonable measures to promptly delete such data."
     },
-
     "privacy_rights": {
       "title": "9. What Are Your Privacy Rights?",
-      "description": "Depending on where you are located geographically, the applicable privacy law may mean you have certain rights regarding your personal information.",
+      "description": "Depending on your location, you may have the right to access, update, or delete your personal information.",
       "withdraw_consent": "If we are relying on your consent to process your personal information, you have the right to withdraw your consent at any time. You can withdraw your consent by contacting us at {{email}}."
     },
-
     "dnt": {
       "title": "10. Controls for Do-Not-Track Features",
       "description": "Most web browsers and some mobile operating systems include a Do-Not-Track (\"DNT\") feature or setting you can activate to signal your privacy preference. At this stage, no uniform technology standard for recognizing and implementing DNT signals has been finalized."
     },
-
     "policy_updates": {
       "title": "11. Do We Make Updates to This Notice?",
       "description": "We may update this Privacy Policy from time to time. The updated version will be indicated by an updated 'Revised' date at the top of this Privacy Policy."
     },
-
     "contact": {
       "title": "12. How Can You Contact Us About This Notice?",
       "description": "If you have questions or comments about this notice, you may contact us by post at: {{address}}, or by email at: {{email}}."
@@ -326,7 +310,7 @@
     "tournament": "Tournament",
     "game": "Game",
     "participate": "Participate",
-    "create": "Create",
+    "create": "Create Game",
     "tournament_available": "Tournament available",
     "name": "Pseudo",
     "players": "Nb players",
@@ -341,7 +325,8 @@
     "final": "Final",
     "semi_final": "Semi-Final",
     "little_final": "Little-Finale",
-    "start": "Start",
+    "start": "Start Game",
+    "exit": "Exit",
     "run": "Launch Tournament",
     "friends": "Friends",
     "waitiing": "Waiting...",
