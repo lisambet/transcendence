@@ -5,12 +5,15 @@ import GameStatusBar from '../components/organisms/GameStatusBar';
 import GameControl from '../components/organisms/GameControl';
 import { useGameState } from '../hooks/GameState';
 import { useGameWebSocket } from '../hooks/GameWebSocket';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useKeyboardControls } from '../hooks/input.tsx';
 import { useGameSessions, UseGameSessionsReturn } from '../hooks/GameSessions';
-import { useNavigate } from 'react-router-dom';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/api-client';
+import Button from '../components/atoms/Button';
+import { createAiSession, joinAiToSession } from '../api/game-api';
+import type { GameState } from '../hooks/GameState';
+
 export interface Paddle {
   y: number;
   height: number;
@@ -32,30 +35,17 @@ export interface Scores {
 export type GameStatus = 'waiting' | 'playing' | 'paused' | 'finished';
 
 export interface GameState {
-  ball: {
-    x: number;
-    y: number;
-    radius: number;
-  };
+  ball: { x: number; y: number; radius: number };
   paddles: {
-    left: {
-      y: number;
-      height: number;
-    };
-    right: {
-      y: number;
-      height: number;
-    };
+    left: { y: number; height: number };
+    right: { y: number; height: number };
   };
   scores: Scores;
   status: GameStatus;
   cosmicBackground: number[][] | null;
 }
 
-const colors = {
-  start: '#00ff9f',
-  end: '#0088ff',
-};
+const colors = { start: '#00ff9f', end: '#0088ff' };
 
 interface ServerMessage {
   type: 'connected' | 'state' | 'gameOver' | 'error' | 'pong';
@@ -66,7 +56,7 @@ interface ServerMessage {
 
 interface GamePageProps {
   sessionId: string | null;
-  gameMode: 'local' | 'remote' | 'tournament';
+  gameMode: 'local' | 'remote' | 'tournament' | 'ai';
 }
 
 export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
@@ -74,87 +64,135 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   const { gameStateRef, updateGameState } = useGameState();
   const [currentSessionId, setSessionId] = useState<string | null>(sessionId);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [winner, setWinner] = useState<'left' | 'right' | null>(null);
+  const [scores, setScores] = useState({ left: 0, right: 0 });
   const wsRef = useRef<WebSocket | null>(null);
+  const phaseRef = useRef<'idle' | 'playing' | 'gameOver'>('idle');
+  const scoresRef = useRef({ left: 0, right: 0 });
   const { tournamentId } = useParams<{ tournamentId?: string }>();
   const navigate = useNavigate();
 
   useKeyboardControls({
     wsRef,
-    gameMode,
-    enabled: !!currentSessionId,
+    gameMode: gameMode === 'ai' ? 'ai' : gameMode,
+    enabled: !!currentSessionId && !isGameOver,
   });
 
-  const createLocalSession = async () => {
+  // ── Session creation ──────────────────────────────────────────────
+  const createSession = useCallback(async () => {
+    closeWebSocket();
+    wsRef.current = null;
     setIsLoading(true);
-    const requestBody = {
-      gameMode: gameMode,
-      ...(tournamentId ? { tournamentId } : {}),
-    };
-    interface CreateSessionResponse {
-      status: 'success' | 'failure';
-      message: string;
-      sessionId?: string;
-      wsUrl?: string;
-    }
-    const res = await api.post<CreateSessionResponse>('/game/create-session', requestBody);
-    const data = res.data;
-    if (data.sessionId) {
-      setSessionId(data.sessionId);
+    setIsGameOver(false);
+    setWinner(null);
+    setScores({ left: 0, right: 0 });
+    scoresRef.current = { left: 0, right: 0 };
+    phaseRef.current = 'idle';
+
+    if (gameMode === 'ai') {
+      const { sessionId: newId } = await createAiSession();
+      setSessionId(newId);
+    } else {
+      interface CreateSessionResponse {
+        status: 'success' | 'failure';
+        message: string;
+        sessionId?: string;
+        wsUrl?: string;
+      }
+      const requestBody = {
+        gameMode,
+        ...(tournamentId ? { tournamentId } : {}),
+      };
+      const res = await api.post<CreateSessionResponse>('/game/create-session', requestBody);
+      if (res.data.sessionId) setSessionId(res.data.sessionId);
     }
     setIsLoading(false);
-  };
+  }, [closeWebSocket, gameMode, tournamentId]);
 
-  const onStartGame = () => {
-    if (!wsRef.current) {
-      console.error('WebSocket not connected');
-      return;
+  // Auto-create session on mount for local/ai modes
+  useEffect(() => {
+    if ((gameMode === 'local' || gameMode === 'ai') && !currentSessionId) {
+      createSession();
     }
+  }, []);
+
+  // ── Controls ──────────────────────────────────────────────────────
+  const onStartGame = () => {
+    if (!wsRef.current) return;
     wsRef.current.send(JSON.stringify({ type: 'start' }));
   };
 
   const onExitGame = async () => {
     if (!currentSessionId) return;
-    const res = await fetch(`/api/game/del/${currentSessionId}`, {
+    await fetch(`/api/game/del/${currentSessionId}`, {
       method: 'DELETE',
       credentials: 'include',
     });
-    const data = await res.json();
-    if (res.ok && data.message) {
-      navigate('/home');
-    }
+    navigate('/home');
   };
 
-  useEffect(() => {
-    if (gameMode === 'local' && !currentSessionId) {
-      createLocalSession();
-    }
-  }, [gameMode, currentSessionId]);
-
+  // ── WebSocket connection ──────────────────────────────────────────
   useEffect(() => {
     if (!currentSessionId) return;
-    const connectWebSocket = async () => {
-      try {
-        const ws = await openWebSocket(currentSessionId, (message: ServerMessage) => {
-          if (message.type === 'state' && message.data) {
-            updateGameState(message.data);
+    let cancelled = false;
+
+    const connect = async () => {
+      const ws = await openWebSocket(currentSessionId, (message: ServerMessage) => {
+        if (cancelled) return;
+        if (message.type === 'state' && message.data) {
+          phaseRef.current = 'playing';
+          updateGameState(message.data);
+          const s = message.data.scores;
+          if (s.left !== scoresRef.current.left || s.right !== scoresRef.current.right) {
+            scoresRef.current = { left: s.left, right: s.right };
+            setScores({ left: s.left, right: s.right });
           }
-        });
-        wsRef.current = ws;
-      } catch (error) {
-        console.error('Failed to connect WebSocket:', error);
-      }
+        } else if (message.type === 'gameOver' && message.data) {
+          phaseRef.current = 'gameOver';
+          updateGameState(message.data);
+          const s = message.data.scores;
+          scoresRef.current = { left: s.left, right: s.right };
+          setScores({ left: s.left, right: s.right });
+          setWinner(s.left >= s.right ? 'left' : 'right');
+          setIsGameOver(true);
+        }
+      });
+
+      if (cancelled) { ws.close(); return; }
+      wsRef.current = ws;
+
+      ws.addEventListener('close', () => {
+        if (phaseRef.current !== 'gameOver') setIsGameOver(false);
+      });
+
+      // AI: tell pong-ai service to join
+      if (gameMode === 'ai') await joinAiToSession(currentSessionId);
     };
-    connectWebSocket();
+
+    connect();
     return () => {
+      cancelled = true;
       closeWebSocket();
       wsRef.current = null;
     };
-  }, [currentSessionId, openWebSocket, updateGameState, closeWebSocket]);
+  }, [currentSessionId]);
 
-  const handleSelectSession = (selectedSessionId: string) => {
-    setSessionId(selectedSessionId);
-  };
+  // ── Remote session selection ──────────────────────────────────────
+  const handleSelectSession = (selectedSessionId: string) => setSessionId(selectedSessionId);
   const sessions = useGameSessions() as UseGameSessionsReturn;
+
+  // ── Labels ────────────────────────────────────────────────────────
+  const labelLeft = gameMode === 'ai' ? 'YOU' : 'Player 1';
+  const labelRight = gameMode === 'ai' ? 'AI' : 'Player 2';
+
+  // ── Game Over winner label ────────────────────────────────────────
+  const winnerLabel = () => {
+    if (!winner) return '';
+    if (gameMode === 'ai') return winner === 'left' ? '🏆 You Win!' : '🤖 AI Wins!';
+    return winner === 'left' ? '🏆 Player 1 Wins!' : '🏆 Player 2 Wins!';
+  };
+  const winnerColor = winner === 'left' ? '#34d399' : '#fb7185';
 
   return (
     <div className="w-full h-full relative">
@@ -165,16 +203,22 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
         colorEnd={colors.end}
       >
         <NavBar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Sidebar: scores on top, controls centered at bottom */}
-          <div className="flex flex-col flex-[1] items-center justify-between p-4 gap-4">
+        <div className="flex flex-row flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <div className="flex flex-col flex-[1] items-center justify-between overflow-y-auto p-4 gap-4">
             {gameMode === 'remote' ? (
               <GameStatusBar sessionsData={sessions} onSelectSession={handleSelectSession} />
             ) : (
-              <GameStatusBar sessionsData={null} />
+              <GameStatusBar
+                sessionsData={null}
+                scoreLeft={scores.left}
+                scoreRight={scores.right}
+                labelLeft={labelLeft}
+                labelRight={labelRight}
+              />
             )}
             <GameControl
-              onCreateLocalGame={createLocalSession}
+              onCreateLocalGame={createSession}
               onStartGame={onStartGame}
               onExitGame={onExitGame}
               gameMode={gameMode}
@@ -182,8 +226,29 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
               className="flex-col w-full"
             />
           </div>
-          <div className="flex-[3] flex justify-center p-4">
+
+          {/* Arena + Game Over overlay */}
+          <div className="flex-[3] flex justify-center p-4 relative">
             <Arena gameStateRef={gameStateRef} />
+            {isGameOver && (
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center gap-6"
+                style={{ background: 'rgba(2,6,23,0.85)', backdropFilter: 'blur(4px)' }}
+              >
+                <p
+                  className="text-3xl font-bold font-mono"
+                  style={{ color: winnerColor }}
+                >
+                  {winnerLabel()}
+                </p>
+                <p className="text-slate-400 font-mono text-lg">
+                  {scores.left} — {scores.right}
+                </p>
+                <Button variant="secondary" type="button" onClick={createSession}>
+                  Play Again
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </Background>
