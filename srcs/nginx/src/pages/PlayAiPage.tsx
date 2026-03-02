@@ -12,6 +12,11 @@ import { useNavigate } from 'react-router-dom';
 import type { GameState } from '../hooks/GameState';
 import Button from '../components/atoms/Button';
 
+const colors = {
+  start: '#00ff9f',
+  end: '#0088ff',
+};
+
 interface ServerMessage {
   type: 'connected' | 'state' | 'gameOver' | 'error' | 'pong';
   sessionId?: string;
@@ -117,11 +122,16 @@ export const PlayAiPage = () => {
 
   return (
     <div className="w-full h-full relative">
-      <Background grainIntensity={4} baseFrequency={0.28} colorStart="#00ff9f" colorEnd="#0088ff">
+      <Background
+        grainIntensity={4}
+        baseFrequency={0.28}
+        colorStart={colors.start}
+        colorEnd={colors.end}
+      >
         <NavBar />
         <div className="flex flex-row flex-1 overflow-hidden">
-          {/* Sidebar: scores on top, controls centered at bottom */}
-          <div className="flex flex-col flex-[1] items-center justify-between p-4 gap-4">
+          {/* Sidebar: scores on top, controls at bottom */}
+          <div className="flex flex-col flex-[1] items-center justify-between overflow-y-auto p-4 gap-4">
             <GameStatusBar
               sessionsData={null}
               scoreLeft={scores.left}
