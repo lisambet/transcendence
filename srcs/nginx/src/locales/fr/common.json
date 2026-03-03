@@ -85,9 +85,7 @@
   "privacy_policy": {
     "title": "Politique de Confidentialité",
     "last_updated": "Dernière mise à jour : 24 février 2026",
-
     "intro": "{{companyName}} (« nous », « notre » ou « nos ») s'engage à protéger votre vie privée. Cette Politique de Confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos informations lorsque vous utilisez nos services.",
-
     "summary": {
       "title": "Résumé des points clés",
       "description": "Ce résumé présente les points clés de notre Politique de Confidentialité. Cliquez sur les liens ci-dessous pour accéder directement à la section qui vous intéresse.",
@@ -116,9 +114,7 @@
         "description": "Selon votre localisation géographique, la législation applicable en matière de confidentialité peut vous accorder certains droits concernant vos informations personnelles."
       }
     },
-
     "table_of_contents": "Table des matières",
-
     "toc": {
       "info_collect": "1. Quelles informations collectons-nous ?",
       "info_use": "2. Comment traitons-nous vos informations ?",
@@ -129,11 +125,10 @@
       "info_retain": "7. Combien de temps conservons-nous vos informations ?",
       "info_minors": "8. Collectons-nous des informations concernant les mineurs ?",
       "privacy_rights": "9. Quels sont vos droits en matière de confidentialité ?",
-      "dnt": "10. Contrôles pour les fonctionnalités \" Ne pas suivre \"",
+      "dnt": "10. Contrôles pour les fonctionnalités \"Ne pas suivre\"",
       "policy_updates": "11. Apportons-nous des mises à jour à cet avis ?",
       "contact": "12. Comment nous contacter concernant cet avis ?"
     },
-
     "info_collect": {
       "title": "1. Quelles informations collectons-nous ?",
       "personal_info": {
@@ -145,12 +140,10 @@
         "description": "Nous collectons automatiquement certaines informations lorsque vous visitez, utilisez ou naviguez sur nos Services. Ces informations ne révèlent pas votre identité spécifique, mais peuvent inclure des informations sur votre appareil et votre utilisation, telles que votre adresse IP, les caractéristiques de votre navigateur et de votre appareil, votre système d'exploitation et d'autres informations techniques."
       }
     },
-
     "info_use": {
       "title": "2. Comment traitons-nous vos informations ?",
       "description": "Nous traitons vos informations personnelles pour diverses raisons, en fonction de la manière dont vous interagissez avec nos Services, notamment pour fournir, améliorer et administrer nos Services, communiquer avec vous, assurer la sécurité et prévenir la fraude, et nous conformer à la loi."
     },
-
     "who_share": {
       "title": "3. Quand et avec qui partageons-nous vos informations personnelles ?",
       "description": "Nous pouvons partager vos informations dans des situations spécifiques décrites dans cette section et/ou avec les tiers suivants :",
@@ -158,48 +151,39 @@
       "affiliates": "Affiliés : Nous pouvons partager vos informations avec nos affiliés, auquel cas nous exigeons de ces affiliés qu'ils respectent cette Politique de Confidentialité.",
       "business_partners": "Partenaires commerciaux : Nous pouvons partager vos informations avec nos partenaires commerciaux afin de vous proposer certains produits, services ou promotions."
     },
-
     "cookies": {
       "title": "4. Utilisons-nous des cookies et d'autres technologies de suivi ?",
       "description": "Nous pouvons utiliser des cookies et des technologies de suivi similaires pour collecter et stocker vos informations. Ces technologies nous aident à maintenir la sécurité de nos Services, à prévenir les plantages et à analyser l'utilisation."
     },
-
     "social_logins": {
       "title": "5. Comment gérons-nous vos connexions via les réseaux sociaux ?",
       "description": "Si vous choisissez de vous inscrire ou de vous connecter à nos Services en utilisant un compte de réseau social, nous pouvons avoir accès à certaines informations vous concernant depuis votre fournisseur de réseau social."
     },
-
     "intl_transfers": {
       "title": "6. Vos informations sont-elles transférées à l'international ?",
       "description": "Vos informations peuvent être transférées, stockées et traitées dans des pays autres que le vôtre. Nous prendrons toutes les mesures nécessaires pour protéger vos informations personnelles conformément à cette Politique de Confidentialité et à la législation applicable."
     },
-
     "info_retain": {
       "title": "7. Combien de temps conservons-nous vos informations ?",
       "description": "Nous ne conserverons vos informations personnelles que pendant la durée nécessaire aux fins décrites dans cette Politique de Confidentialité, sauf si une période de conservation plus longue est requise ou autorisée par la loi."
     },
-
     "info_minors": {
       "title": "8. Collectons-nous des informations concernant les mineurs ?",
       "description": "Nous ne collectons pas sciemment de données ou ne ciblons pas les mineurs de moins de 18 ans. Si nous apprenons que des informations personnelles concernant des utilisateurs de moins de 18 ans ont été collectées, nous désactiverons le compte et prendrons des mesures raisonnables pour supprimer rapidement ces données."
     },
-
     "privacy_rights": {
       "title": "9. Quels sont vos droits en matière de confidentialité ?",
       "description": "Selon votre localisation géographique, la législation applicable en matière de confidentialité peut vous accorder certains droits concernant vos informations personnelles.",
       "withdraw_consent": "Si nous nous appuyons sur votre consentement pour traiter vos informations personnelles, vous avez le droit de retirer votre consentement à tout moment. Vous pouvez retirer votre consentement en nous contactant à l'adresse {{email}}."
     },
-
     "dnt": {
-      "title": "10. Contrôles pour les fonctionnalités \" Ne pas suivre \"",
-      "description": "La plupart des navigateurs web et certains systèmes d'exploitation mobiles incluent une fonctionnalité ou un paramètre \" Ne pas suivre \" (\" DNT \") que vous pouvez activer pour signaler votre préférence de confidentialité. À ce stade, aucune norme technologique uniforme pour la reconnaissance et la mise en œuvre des signaux DNT n'a été finalisée."
+      "title": "10. Contrôles pour les fonctionnalités \"Ne pas suivre\"",
+      "description": "La plupart des navigateurs web et certains systèmes d'exploitation mobiles incluent une fonctionnalité ou un paramètre \"Ne pas suivre\" (\"DNT\") que vous pouvez activer pour signaler votre préférence de confidentialité. À ce stade, aucune norme technologique uniforme pour la reconnaissance et la mise en œuvre des signaux DNT n'a été finalisée."
     },
-
     "policy_updates": {
       "title": "11. Apportons-nous des mises à jour à cet avis ?",
-      "description": "Nous pouvons mettre à jour cette Politique de Confidentialité de temps en temps. La version mise à jour sera indiquée par une date de \" Révision \" mise à jour en haut de cette Politique de Confidentialité."
+      "description": "Nous pouvons mettre à jour cette Politique de Confidentialité de temps en temps. La version mise à jour sera indiquée par une date de \"Révision\" mise à jour en haut de cette Politique de Confidentialité."
     },
-
     "contact": {
       "title": "12. Comment nous contacter concernant cet avis ?",
       "description": "Si vous avez des questions ou des commentaires concernant cet avis, vous pouvez nous contacter par courrier à l'adresse suivante : {{address}}, ou par e-mail à l'adresse : {{email}}."
@@ -322,6 +306,9 @@
   "game": {
     "playWithAI": "Match vs IA",
     "playWithFriends": "Match vs ami",
+    "playWithAi": "Match vs IA",
+    "playRemote": "Partie en ligne",
+    "playLocal": "Partie locale",
     "tournament": "Tournoi",
     "game": "Jeu",
     "participate": "Participer",
@@ -341,11 +328,23 @@
     "semi_final": "Demi-Finale",
     "little_final": "Petite-Finale",
     "start": "Jouer",
+    "exit": "Quitter",
+    "play_again": "Rejouer",
     "run": "Lancement du tournoi",
     "friends": "Amis",
     "waitiing": "Attente...",
     "creating": "Création du tournoi...",
-    "tournament_full": "Ce tournoi est déjà complet (maximum 4 joueurs)."
+    "tournament_full": "Ce tournoi est déjà complet (maximum 4 joueurs).",
+    "winner": {
+      "you_win": "Vous gagnez !",
+      "ai_wins": "L'IA gagne !",
+      "player1_wins": "Joueur 1 gagne !",
+      "player2_wins": "Joueur 2 gagne !",
+      "you_label": "Vous",
+      "ai_label": "IA",
+      "player1_label": "Joueur 1",
+      "player2_label": "Joueur 2"
+    }
   },
   "stats": {
     "title": "Statistiques des joueurs",
