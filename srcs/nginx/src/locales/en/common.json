@@ -334,10 +334,14 @@
     "creating": "Creating tournament...",
     "tournament_full": "This tournament is full(maximum 4 players).",
     "winner": {
-      "you_win": "\ud83c\udfc6 You Win!",
-      "ai_wins": "\ud83e\udd16 AI Wins!",
-      "player1_wins": "\ud83c\udfc6 Player 1 Wins!",
-      "player2_wins": "\ud83c\udfc6 Player 2 Wins!"
+      "you_win": "You Win!",
+      "ai_wins": "AI Wins!",
+      "player1_wins": "Player 1 Wins!",
+      "player2_wins": "Player 2 Wins!",
+      "you_label": "You",
+      "ai_label": "AI",
+      "player1_label": "Player 1",
+      "player2_label": "Player 2"
     }
   },
   "stats": {

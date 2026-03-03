@@ -35,17 +35,6 @@ export interface Scores {
 
 export type GameStatus = 'waiting' | 'playing' | 'paused' | 'finished';
 
-export interface GameState {
-  ball: { x: number; y: number; radius: number };
-  paddles: {
-    left: { y: number; height: number };
-    right: { y: number; height: number };
-  };
-  scores: Scores;
-  status: GameStatus;
-  cosmicBackground: number[][] | null;
-}
-
 const colors = { start: '#00ff9f', end: '#0088ff' };
 
 interface ServerMessage {
