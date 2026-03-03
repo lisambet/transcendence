@@ -2,6 +2,7 @@ import { GameSettings, GameState, Scores, GameStatus, Paddles } from './game.typ
 import { Vector2 } from './game.vector.js';
 // import { getForceAt2D, getNoiseField} from "./game.perlin.js";
 import { CosmicMicroWaveNoise } from './game.noise.js';
+import { saveMatchResult } from './game.database.js';
 
 class Ball {
   pos: Vector2;
@@ -21,7 +22,7 @@ class Ball {
   }
 
   apply(force: Vector2) {
-    // Newton’s second law: F = m * a  →  a = F / m
+    // Newton's second law: F = m * a  →  a = F / m
     // So we add (force / mass) to the acceleration
     const f = force.divVec(this.mass);
     this.acc.add(f);
@@ -44,6 +45,8 @@ export class PongGame {
     microWaveSize: 10,
   };
   sessionId: string;
+  player1Id: number | null;
+  player2Id: number | null;
   width: number;
   height: number;
   ball: Ball;
@@ -55,8 +58,14 @@ export class PongGame {
   serve: number;
   cosmicBackground: CosmicMicroWaveNoise | null;
 
-  constructor(sessionId: string) {
+  constructor(
+    sessionId: string,
+    player1Id: number | null = null,
+    player2Id: number | null = null,
+  ) {
     this.sessionId = sessionId;
+    this.player1Id = player1Id;
+    this.player2Id = player2Id;
     this.width = 800;
     this.height = 600;
     this.time = 0;
@@ -295,7 +304,19 @@ export class PongGame {
       console.log(
         `[${this.sessionId}] Game finished! Final score: ${this.scores.left} - ${this.scores.right}`,
       );
-      // send to blockchain
+      // Save result to database
+      const winnerId =
+        this.scores.left >= 5 ? this.player1Id : this.player2Id;
+      try {
+        saveMatchResult(
+          this.sessionId,
+          this.scores.left,
+          this.scores.right,
+          winnerId,
+        );
+      } catch (err) {
+        console.error(`[${this.sessionId}] Failed to save match result:`, err);
+      }
     }
   }
 

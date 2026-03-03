@@ -99,6 +99,7 @@ export async function newGameSession(req: FastifyRequest, reply: FastifyReply) {
   const body = req.body as {
     gameMode: string;
     tournamentId?: number;
+    player2Id?: number; // optional: for remote/local modes
   };
   req.server.log.info(`Creating new session with body: ${body}`);
   const userId = req.user.id;
@@ -117,6 +118,20 @@ export async function newGameSession(req: FastifyRequest, reply: FastifyReply) {
       wsUrl: `/game/ws/${sessionId}`,
     };
   }
+
+  // For non-tournament games, create a free match row in the DB to track the score
+  if (body.gameMode !== 'tournament' && sessionId) {
+    const player2Id = body.player2Id ?? userId; // fallback to same user for local/ai
+    try {
+      db.createFreeMatch(userId, player2Id, sessionId);
+      // Pass playerIds to the game engine so winConditions can save the result
+      sessionData.game.player1Id = userId;
+      sessionData.game.player2Id = player2Id;
+    } catch (err) {
+      req.server.log.warn({ err }, 'Could not create free match row (player may not be in DB yet)');
+    }
+  }
+
   if (sessionData.game) sessionData.game.preview();
   return {
     status: 'success',

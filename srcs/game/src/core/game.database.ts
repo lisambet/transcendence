@@ -454,6 +454,54 @@ function onMatchFinished(matchId: number) {
   })();
 }
 
+// ---- FREE MATCH ----
+const createFreeMatchStmt = db.prepare(`
+INSERT INTO match(player1, player2, sessionId, created_at)
+VALUES (?, ?, ?, ?)
+`);
+
+export function createFreeMatch(
+  player1: number,
+  player2: number,
+  sessionId: string,
+): void {
+  try {
+    createFreeMatchStmt.run(player1, player2, sessionId, Date.now());
+  } catch (err: unknown) {
+    throw new AppError(
+      ERR_DEFS.DB_INSERT_ERROR,
+      { details: [{ field: `createFreeMatch ${sessionId}` }] },
+      err,
+    );
+  }
+}
+
+// ---- MATCH RESULT ----
+const saveMatchResultStmt = db.prepare(`
+UPDATE match
+SET score_player1 = ?,
+    score_player2 = ?,
+    winner_id = ?
+WHERE sessionId = ?
+`);
+
+export function saveMatchResult(
+  sessionId: string,
+  scorePlayer1: number,
+  scorePlayer2: number,
+  winnerId: number | null,
+): void {
+  try {
+    saveMatchResultStmt.run(scorePlayer1, scorePlayer2, winnerId, sessionId);
+  } catch (err: unknown) {
+    throw new AppError(
+      ERR_DEFS.DB_UPDATE_ERROR,
+      { details: [{ field: `saveMatchResult ${sessionId}` }] },
+      err,
+    );
+  }
+}
+
 // ---- STATS ----
 const getTournamentStatsStmt = db.prepare(`
 SELECT
