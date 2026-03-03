@@ -3,13 +3,15 @@ import { useEffect } from 'react';
 interface UseKeyboardControlsProps {
   wsRef: React.RefObject<WebSocket | null>;
   gameMode: string;
-  enabled?: boolean; // Optional: to enable/disable controls
+  enabled?: boolean;
+  side?: 'left' | 'right'; // for remote mode
 }
 
 export const useKeyboardControls = ({
   wsRef,
   gameMode,
   enabled = true,
+  side = 'left',
 }: UseKeyboardControlsProps) => {
   useEffect(() => {
     if (!enabled) return;
@@ -61,6 +63,24 @@ export const useKeyboardControls = ({
             );
             break;
         }
+      } else if (gameMode === 'remote') {
+        // remote: each player controls their own paddle (side determined by backend)
+        switch (event.key) {
+          case 'w':
+          case 'W':
+          case 'ArrowUp':
+            event.preventDefault();
+            if (event.repeat) break;
+            wsRef.current.send(JSON.stringify({ type: 'paddle', paddle: side, direction: 'up' }));
+            break;
+          case 's':
+          case 'S':
+          case 'ArrowDown':
+            event.preventDefault();
+            if (event.repeat) break;
+            wsRef.current.send(JSON.stringify({ type: 'paddle', paddle: side, direction: 'down' }));
+            break;
+        }
       }
     };
 
@@ -83,6 +103,11 @@ export const useKeyboardControls = ({
         if (keys.includes(event.key)) {
           wsRef.current.send(JSON.stringify({ type: 'paddle', paddle: 'left', direction: 'stop' }));
         }
+      } else if (gameMode === 'remote') {
+        const keys = ['w', 'W', 's', 'S', 'ArrowUp', 'ArrowDown'];
+        if (keys.includes(event.key)) {
+          wsRef.current.send(JSON.stringify({ type: 'paddle', paddle: side, direction: 'stop' }));
+        }
       }
     };
 
@@ -93,5 +118,5 @@ export const useKeyboardControls = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [wsRef, enabled, gameMode]);
+  }, [wsRef, enabled, gameMode, side]);
 };

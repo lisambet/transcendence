@@ -40,6 +40,7 @@ const colors = { start: '#00ff9f', end: '#0088ff' };
 interface ServerMessage {
   type: 'connected' | 'state' | 'gameOver' | 'error' | 'pong';
   sessionId?: string;
+  side?: 'left' | 'right';
   data?: GameState;
   message?: string;
 }
@@ -58,6 +59,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
   const [isGameOver, setIsGameOver] = useState(false);
   const [winner, setWinner] = useState<'left' | 'right' | null>(null);
   const [scores, setScores] = useState({ left: 0, right: 0 });
+  const [mySide, setMySide] = useState<'left' | 'right'>('left');
   const wsRef = useRef<WebSocket | null>(null);
   const phaseRef = useRef<'idle' | 'playing' | 'gameOver'>('idle');
   const scoresRef = useRef({ left: 0, right: 0 });
@@ -69,6 +71,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
     wsRef,
     gameMode: gameMode === 'ai' ? 'ai' : gameMode,
     enabled: !!currentSessionId && !isGameOver,
+    side: mySide,
   });
 
   // ── Session creation ──────────────────────────────────────────────
@@ -81,6 +84,7 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
     setScores({ left: 0, right: 0 });
     scoresRef.current = { left: 0, right: 0 };
     phaseRef.current = 'idle';
+    setMySide('left');
 
     if (gameMode === 'ai') {
       const { sessionId: newId } = await createAiSession();
@@ -140,7 +144,9 @@ export const GamePage = ({ sessionId, gameMode }: GamePageProps) => {
     const connect = async () => {
       const ws = await openWebSocket(currentSessionId, (message: ServerMessage) => {
         if (cancelled) return;
-        if (message.type === 'state' && message.data) {
+        if (message.type === 'connected' && message.side) {
+          setMySide(message.side);
+        } else if (message.type === 'state' && message.data) {
           phaseRef.current = 'playing';
           updateGameState(message.data);
           const s = message.data.scores;
