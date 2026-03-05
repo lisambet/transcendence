@@ -1,10 +1,42 @@
-import { FastifyInstance, FastifyRequest } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { randomUUID } from 'crypto';
 import { gameSessions } from '../core/game.state.js';
 import { getGame as getSessionData } from '../service/game.init.js';
 import { handleClientMessage } from '../service/game.communication.js';
 import { GameSettings } from '../core/game.types.js';
 import { WebSocket } from 'ws';
+import * as db from '../core/game.database.js';
+import { AppError, LOG_REASONS } from '@transcendence/core';
+import { cleanupConnection } from '../service/game.connections.js';
+import { WS_CLOSE } from '../core/game.state.js';
+
+type TournamentParams = { id: string };
+
+export async function deleteSession(this: FastifyInstance, req: FastifyRequest) {
+  const params = req.params as { sessionId: string };
+  const sessionId = params.sessionId;
+  // Validate sessionId
+  if (!sessionId) {
+    return { status: 'error', message: 'Session ID required' };
+  }
+
+  this.log.info('Delete session');
+
+  const sessionData = getSessionData.call(this, null, sessionId, null);
+  if (!sessionData) {
+    return {
+      status: 'failure',
+      message: 'no session for this id',
+    };
+  }
+  sessionData.game.stop();
+  cleanupConnection(null, sessionId, WS_CLOSE.PLAYER_QUIT, 'Player has left');
+  gameSessions.delete(sessionId);
+  return {
+    status: 'succes',
+    message: 'session has been erased',
+  };
+}
 
 // Controller - get sessionId from body
 export async function gameSettings(this: FastifyInstance, req: FastifyRequest) {
@@ -59,15 +91,35 @@ export async function gameSettings(this: FastifyInstance, req: FastifyRequest) {
   };
 }
 
-export async function newGameSession(this: FastifyInstance) {
-  const sessionId = randomUUID();
-  const sessionData = getSessionData.call(this, null, sessionId);
+export async function newGameSession(req: FastifyRequest, reply: FastifyReply) {
+  req.server.log.info(`Creating new session------`);
+  const body = req.body as {
+    gameMode: string;
+    tournamentId?: number;
+  };
+  req.server.log.info(`Creating new session with body: ${body}`);
+  const userId = req.user.id;
+  req.server.log.info(`Creating new session with user id: ${userId}`);
+  let sessionId = null;
+  if (body.gameMode === 'tournament')
+    sessionId = db.getMatchToPlay(body.tournamentId!, userId!)?.sessionId;
+  else sessionId = randomUUID();
+  req.server.log.info(`Creating new session with mode: ${body.gameMode}`);
+  const sessionData = getSessionData.call(req.server, null, sessionId, body.gameMode);
+  if (!sessionData) {
+    return {
+      status: 'failure',
+      message: 'Game session failed',
+      sessionId: sessionId,
+      wsUrl: `/game/ws/${sessionId}`,
+    };
+  }
   if (sessionData.game) sessionData.game.preview();
   return {
     status: 'success',
     message: 'Game session created',
     sessionId: sessionId,
-    wsUrl: `/game/${sessionId}`,
+    wsUrl: `/game/ws/${sessionId}`,
   };
 }
 
@@ -81,12 +133,15 @@ export async function healthCheck() {
 }
 
 export async function listGameSessions() {
-  const sessions = Array.from(gameSessions.entries()).map(([id, sessionData]) => ({
-    sessionId: id,
-    state: sessionData.game.getState(),
-    playerCount: sessionData.players.size,
-    hasInterval: sessionData.interval !== null,
-  }));
+  const sessions = Array.from(gameSessions.entries())
+    .map(([id, sessionData]) => ({
+      sessionId: id,
+      state: sessionData.game.getState(),
+      playerCount: sessionData.players.size,
+      hasInterval: sessionData.interval !== null,
+      gameMode: sessionData.gameMode,
+    }))
+    .filter((session) => session.gameMode === 'remote');
 
   return {
     status: 'success',
@@ -103,7 +158,134 @@ export async function webSocketConnect(
   console.log('get to the sessions id by WS');
   const params = req.params as { sessionId: string };
   const sessionId = params.sessionId;
+
   handleClientMessage.call(this, socket, sessionId);
+}
+
+export async function newTournament(req: FastifyRequest, reply: FastifyReply) {
+  const userId = req.user.id;
+  req.server.log.info(`Creating new tournament for user: ${userId}`);
+  const tournament_id = db.createTournament(userId);
+  return reply.code(200).send(tournament_id);
+}
+
+export async function listTournament(req: FastifyRequest, reply: FastifyReply) {
+  const tournaments = db.listTournaments();
+  return reply.code(200).send(tournaments);
+}
+
+export async function joinTournament(
+  req: FastifyRequest<{ Params: TournamentParams }>,
+  reply: FastifyReply,
+) {
+  const tourId = Number(req.params.id);
+  const idHeader = (req.headers as any)['x-user-id'];
+  const userId = idHeader ? Number(idHeader) : null;
+  if (!userId)
+    return reply.code(400).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
+  const userExist = db.getUser(userId);
+  if (!userExist)
+    return reply.code(400).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
+  try {
+    db.joinTournament(userId, tourId);
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      const isTournamentFull = err.context?.details?.some(
+        (d: any) => d.reason === LOG_REASONS.TOURNAMENT.FULL,
+      );
+      if (isTournamentFull) return reply.code(409).send({ message: err.message });
+    } else {
+      throw err;
+    }
+  }
+  return reply.code(200).send({ joining: tourId });
+}
+
+export function getMatchToPlay(
+  req: FastifyRequest<{ Params: TournamentParams }>,
+  reply: FastifyReply,
+) {
+  const tourId = Number(req.params.id);
+  const idHeader = (req.headers as any)['x-user-id'];
+  const userId = idHeader ? Number(idHeader) : null;
+  if (!userId)
+    return reply.code(400).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
+  try {
+    const matchToPlay = db.getMatchToPlay(tourId, userId);
+    return reply.code(200).send(matchToPlay);
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      const isNoMatchToPlay = err.context?.details?.some(
+        (d: any) => d.reason === LOG_REASONS.TOURNAMENT.NO_MATCH_TO_PLAY,
+      );
+      if (isNoMatchToPlay) return reply.code(404).send({ message: err.message });
+    } else {
+      throw err;
+    }
+  }
+}
+
+export async function newTournament(req: FastifyRequest, reply: FastifyReply) {
+  const userId = req.user.id;
+  req.server.log.info(`Creating new tournament for user: ${userId}`);
+  const tournament_id = db.createTournament(userId);
+  return reply.code(200).send(tournament_id);
+}
+
+export async function listTournament(req: FastifyRequest, reply: FastifyReply) {
+  const tournaments = db.listTournaments();
+  return reply.code(200).send(tournaments);
+}
+
+export async function joinTournament(
+  req: FastifyRequest<{ Params: TournamentParams }>,
+  reply: FastifyReply,
+) {
+  const tourId = Number(req.params.id);
+  const idHeader = (req.headers as any)['x-user-id'];
+  const userId = idHeader ? Number(idHeader) : null;
+  if (!userId)
+    return reply.code(400).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
+  const userExist = db.getUser(userId);
+  if (!userExist)
+    return reply.code(400).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
+  try {
+    db.joinTournament(userId, tourId);
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      const isTournamentFull = err.context?.details?.some(
+        (d: any) => d.reason === LOG_REASONS.TOURNAMENT.FULL,
+      );
+      if (isTournamentFull) return reply.code(409).send({ message: err.message });
+    } else {
+      throw err;
+    }
+  }
+  return reply.code(200).send({ joining: tourId });
+}
+
+export function getMatchToPlay(
+  req: FastifyRequest<{ Params: TournamentParams }>,
+  reply: FastifyReply,
+) {
+  const tourId = Number(req.params.id);
+  const idHeader = (req.headers as any)['x-user-id'];
+  const userId = idHeader ? Number(idHeader) : null;
+  if (!userId)
+    return reply.code(400).send({ code: 'NOT_VALID_USER', message: "This user don't exist" });
+  try {
+    const matchToPlay = db.getMatchToPlay(tourId, userId);
+    return reply.code(200).send(matchToPlay);
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      const isNoMatchToPlay = err.context?.details?.some(
+        (d: any) => d.reason === LOG_REASONS.TOURNAMENT.NO_MATCH_TO_PLAY,
+      );
+      if (isNoMatchToPlay) return reply.code(404).send({ message: err.message });
+    } else {
+      throw err;
+    }
+  }
 }
 
 // RL API: Reset game session and start it immediately for RL training
@@ -127,7 +309,7 @@ export async function resetGame(this: FastifyInstance, req: FastifyRequest) {
   // Full reset
   sessionData.game.scores.left = 0;
   sessionData.game.scores.right = 0;
-  sessionData.game.status = 'playing';  // set before start() so it doesn't early-return
+  sessionData.game.status = 'playing'; // set before start() so it doesn't early-return
   sessionData.game.resetBall();
 
   // Re-initialise the noise field
@@ -144,12 +326,12 @@ export async function stepGame(this: FastifyInstance, req: FastifyRequest) {
     sessionId?: string;
     action?: 'up' | 'down' | 'stop';
     paddle?: 'left' | 'right';
-    leftAction?: 'up' | 'down' | 'stop';  // optional: self-play opponent action
+    leftAction?: 'up' | 'down' | 'stop'; // optional: self-play opponent action
   };
-  const sessionId  = body.sessionId;
-  const action     = body.action;
-  const paddle     = body.paddle || 'right';
-  const leftAction = body.leftAction;  // undefined when not in self-play mode
+  const sessionId = body.sessionId;
+  const action = body.action;
+  const paddle = body.paddle || 'right';
+  const leftAction = body.leftAction; // undefined when not in self-play mode
 
   if (!sessionId || !action) {
     return { status: 'failure', message: 'sessionId and action are required' };
@@ -160,7 +342,7 @@ export async function stepGame(this: FastifyInstance, req: FastifyRequest) {
   }
 
   const prevScoreRight = sessionData.game.scores.right;
-  const prevScoreLeft  = sessionData.game.scores.left;
+  const prevScoreLeft = sessionData.game.scores.left;
 
   // Apply right paddle action (the learning agent)
   sessionData.game.setPaddleDirection(paddle, action);
@@ -173,18 +355,18 @@ export async function stepGame(this: FastifyInstance, req: FastifyRequest) {
 
   sessionData.game.update();
 
-  const state         = sessionData.game.getState();
-  const done          = sessionData.game.status === 'finished';
-  const scoredRight   = sessionData.game.scores.right - prevScoreRight;
-  const scoredLeft    = sessionData.game.scores.left  - prevScoreLeft;
+  const state = sessionData.game.getState();
+  const done = sessionData.game.status === 'finished';
+  const scoredRight = sessionData.game.scores.right - prevScoreRight;
+  const scoredLeft = sessionData.game.scores.left - prevScoreLeft;
 
   // Shaped reward:
   //   +1   AI scores a point
   //   -1   opponent scores a point
   //   +0.1 small reward for keeping paddle close to ball (encourages tracking)
-  const paddleCenterY = (state.paddles[paddle].y + state.paddles[paddle].height / 2);
-  const ballY         = state.ball.y;
-  const maxDist       = 600;
+  const paddleCenterY = state.paddles[paddle].y + state.paddles[paddle].height / 2;
+  const ballY = state.ball.y;
+  const maxDist = 600;
   const trackingReward = (1 - Math.abs(paddleCenterY - ballY) / maxDist) * 0.1;
 
   const reward = scoredRight - scoredLeft + (done ? 0 : trackingReward);
@@ -210,4 +392,24 @@ export async function getGameState(this: FastifyInstance, req: FastifyRequest) {
     return { status: 'failure', message: `Session ${sessionId} not found` };
   }
   return { status: 'success', state: sessionData.game.getState() };
+}
+
+export async function showTournament(
+  req: FastifyRequest<{ Params: TournamentParams }>,
+  reply: FastifyReply,
+) {
+  const tourId = Number(req.params.id);
+  const result = db.showTournament(tourId);
+  if (result.length === 0) return reply.code(404).send(`tournament don't exist`);
+  return reply.code(200).send(result);
+}
+
+export async function getTournamentStats(req: FastifyRequest, reply: FastifyReply) {
+  const stats = db.getTournamentStats();
+  return reply.code(200).send(stats);
+}
+
+export async function getMatchHistory(req: FastifyRequest, reply: FastifyReply) {
+  const history = db.getMatchHistory();
+  return reply.code(200).send(history);
 }

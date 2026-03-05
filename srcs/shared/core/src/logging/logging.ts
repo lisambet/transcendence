@@ -108,5 +108,17 @@ export const LOG_REASONS = {
     REDIS_ERROR: 'infra_redis_error',
     FILE_WRITE_ERROR: 'infra_file_write_error',
   },
+  DATABASE: {
+    DB_SELECT: 'db_select_error',
+    DB_UPDATE: 'db_update_error',
+    DB_INSERT: 'db_insert_error',
+    DB_DELETE: 'db_delete_error',
+  },
+  TOURNAMENT: {
+    FULL: 'tournament_full',
+    COUNT: 'tournament_count_error',
+    NO_MATCH_TO_PLAY: 'tournament_no_match_to_play',
+    DOESNT_EXIST: 'tournament_doesnt_exist',
+  },
   UNKNOWN: 'unknown_reason',
 } as const;

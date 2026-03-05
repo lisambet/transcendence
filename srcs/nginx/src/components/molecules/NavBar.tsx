@@ -1,6 +1,6 @@
 import MenuElement from '../atoms/MenuElement';
 import { MenuActions } from '../../types/react-types';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Locale } from '../atoms/Locale';
 import { useAuth } from '../../providers/AuthProvider';
 import Avatar from '../atoms/Avatar';
@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 export const NavBar = () => {
   const { user, isLoggedIn, logout } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const playItems = [
     { label: t('navbar.play_friend'), to: '/friends' },
@@ -23,23 +24,26 @@ export const NavBar = () => {
 
   const profileItems = [
     { label: t('navbar.profile'), to: '/me' },
+    { label: t('faq.title'), to: '/faq' },
     { label: t('navbar.profile_logout'), onClick: () => logout() },
   ];
 
   return (
     <nav
-      className={`mb-3 bg-teal-800/30 p-5 w-full flex flex-row ${!isLoggedIn ? 'justify-center' : 'justify-between'}`}
+      className={`mb-2 bg-teal-800/30 p-5 w-full flex flex-row sm:gap-4 ${!isLoggedIn ? 'justify-center' : 'justify-between'}`}
     >
       <div className="lg:text-3xl hidden sm:block group font-quantico[900] font-stretch-extra-expanded font-bold tracking-wider self-center uppercase">
-        <span>Sp</span>
-        <span className="lowercase inline-block duration-500 group-hover:rotate-180">i</span>
-        <span>n Pong</span>
+        <Link to="/home">
+          <span>Sp</span>
+          <span className="lowercase inline-block duration-500 group-hover:rotate-180">i</span>
+          <span>n Pong</span>
+        </Link>
       </div>
       {user && isLoggedIn && (
         <>
-          <MenuElement action={MenuActions.PLAY} items={playItems} scale={0.7}></MenuElement>
-          <MenuElement action={MenuActions.STATS} items={statsItems}></MenuElement>
-          <MenuElement action={MenuActions.PROFILE} items={profileItems}></MenuElement>
+          <MenuElement action={MenuActions.PLAY} items={playItems} scale={0.7} />
+          <MenuElement action={MenuActions.STATS} items={statsItems} />
+          <MenuElement action={MenuActions.PROFILE} items={profileItems} />
         </>
       )}
 

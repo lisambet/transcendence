@@ -12,12 +12,14 @@ type SecurityFrontReasons =
 
 type ValidationReasons = DeepValues<typeof LOG_REASONS.VALIDATION>;
 type ConflictReasons = DeepValues<typeof LOG_REASONS.CONFLICT>;
+type TournamentReasons = DeepValues<typeof LOG_REASONS.TOURNAMENT>;
 
 export type FrontendReasonValue =
   | SecurityFrontReasons
   | ValidationReasons
   | ConflictReasons
   | ZodIssueCode
+  | TournamentReasons
   | typeof LOG_REASONS.UNKNOWN;
 
 const PUBLIC_REASONS: string[] = [
@@ -81,16 +83,19 @@ export class FrontendError extends Error {
   public readonly code: ErrorCode;
   public readonly statusCode: HttpStatus;
   public readonly details: ErrorDetail[] | null;
+  public readonly meta: Record<string, unknown> | undefined;
   constructor(
     message: string,
     statusCode: HttpStatus,
     code: ErrorCode,
     details: ErrorDetail[] | null,
+    meta?: Record<string, unknown>,
   ) {
     super(message);
     this.code = code;
     this.statusCode = statusCode;
     this.details = details;
+    this.meta = meta;
   }
 }
 
